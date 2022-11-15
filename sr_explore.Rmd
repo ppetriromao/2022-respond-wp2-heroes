@@ -1,0 +1,195 @@
+---
+title: "sr_explore_heroes"
+author: "Papoula Petri-Romao"
+date: "2022-11-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(pacman)
+p_load(tidyverse)
+
+```
+
+
+# defining and mutating stressors
+
+TR16: days worked, should more than 5 days be a stressor?
+TR17: hours worked on those days == should that be a stressors
+MP25c: stigma, if any agreement then stressor
+
+MP25d: frequency of conflicts, does it make sense to count? 
+
+EP32a: should we include feeling remorse? is that somehow the stressor severity?
+
+EP27a-d; double check variable code
+
+psychological support: I suggest two alternatives of recoding. also, I am not sure that we can say that they are stressors. because they could also reduce stress. so maybe we should take them out all together
+
+trust: again, it might be worth looking at them separately, as I am not sure we can say that they are stressors. 
+
+RA56: what are the answer options?
+
+```{r stressors}
+
+stressors <- read.csv("stressors_heroes.csv")
+
+# healthcare worker specific stressors
+
+ds %>%
+  mutate(
+    ehc_1 = case_when(TR15 = 1 ~ 1,
+                   TR15 = 0 ~ 0), # Assigned to new team in past 3 months
+    ehc_2 = case_when(TR16 > 5 ~ 1,
+                      TRUE ~ 1), # days worked past week
+    ehc_3 = case_when((TR16 > 5 & TR17 > 8)~ 1 ,
+                      TRUE ~ 1), #  hours worked on those days
+    ehc_4 = case_when(MP18aa = 1~1,
+                      MP18aa = 0 ~1), # covid-19 unit
+    ehc_5 = case_when(MP25b = 1 ~1,
+                      MP25b = 0 ~ 0), # death of patient
+    ehc_6 = case_when(MP25c >= 3 ~ 1,
+                      MP25c < 3 ~ 0), # stigma
+    ehc_7 = case_when(MP25d = 0 ~ 0,
+                      MP25d = 1 ~ 1,
+                      MP25d = 2 ~ 3,
+                      MP25d = 3 ~ 7,
+                      MP25d = 4 ~14), # conflicts at work
+    ehc_8 = case_when(MP25e >= 3 ~ 1,
+                      MP25e < 3 ~ 0), # violence due to health worker
+    ehc_9 = case_when(EP32 = 1 ~1,
+                      EP32 = 0 ~ 0,
+                      TRUE ~ 0), # need to prioritise patients
+    ehc_10 = case_when(EP27a = 1 ~ 1,
+                       EP27b = 1 ~ 0,
+                       EP27c = 1 ~ 0,
+                       EP27d = 1 ~ 0) # received training or not
+    )
+
+# general stressors
+
+## so here I wasn't sure whether the issue you described with psychol support means that the same variable was assessed under different names, if so I would suggest an alternative below
+
+ds %>%
+  mutate(
+    eg_1 = case_when(SD08 = 1 ~1,
+                     TRUE ~ 0), # living with children
+    eg_2 = case_when(SD09 = 1 ~1,
+                     TRUE ~ 0), # living with elderly
+    eg_3 = case_when(SD10 = 1,
+                     TRUE ~ 0), # living with someone who has disability
+    eg_4 = case_when(RA52a = 1 ~1,
+                     TRUE ~ 0), # psychological support
+    eg_5 = case_when(RA52b = 1 ~1,
+                     TRUE ~ 0), # child care assistance
+    eg_6 = case_when(RA52c = 1 ~1,
+                     TRUE ~ 0), # care assistance
+    eg_7 = case_when(RA52d = 1 ~1,
+                     TRUE ~ 0), # economic assistance
+    eg_8 = case_when(RA53a = 1 ~1,
+                     TRUE ~ 0), # in-person assistance
+    eg_9 = case_when(RA53b = 1 ~1,
+                     TRUE ~ 0), # long-dstaince psychol support
+    eg_10 = case_when(RA53c = 1 ~1, 
+                     TRUE ~ 0), # child care assistance
+    eg_11 = case_when(RA53d = 1 ~1,
+                     TRUE ~ 0), # care assitance for older adults
+    eg_12 = case_when(RA53e = 1 ~1,
+                     TRUE ~ 0), # economic assistance
+    eg_13 = case_when(RA54a = 1 ~1,
+                     TRUE ~ 0), # psychological support
+    eg_14 = case_when(RA54b = 1 ~1,
+                     TRUE ~ 0), # child care assistance
+    eg_15 = case_when(RA54c = 1 ~1,
+                     TRUE ~ 0), # care assistance
+    eg_16 = case_when(RA54d = 1 ~1,
+                     TRUE ~ 0), # economic assistance
+    eg_17 = case_when(RA55a = 1 ~1,
+                     TRUE ~ 0), # in-person assistance
+    eg_18 = case_when(RA55b = 1 ~1,
+                     TRUE ~ 0), # long-dstaince psychol support
+    eg_19 = case_when(RA55c = 1 ~1, 
+                     TRUE ~ 0), # child care assistance
+    eg_20 = case_when(RA55d = 1 ~1,
+                     TRUE ~ 0), # care assitance for older adults
+    eg_21 = case_when(RA55e = 1 ~1,
+                     TRUE ~ 0) # economic assistance
+  )
+
+## alternative if this is the renaming issue
+
+   # eg_4 = case_when(RA52a = 1 ~1,
+   #                  RA54a = 1 ~1,
+   #                   TRUE ~ 0), # psychological support
+   #  eg_5 = case_when(RA52b = 1 ~1,
+   #                   RA53c = 1 ~1,
+   #                   RA55c = 1 ~1,
+   #                   RA54b = 1 ~1,
+   #                   TRUE ~ 0), # child care assistance
+   #  eg_6 = case_when(RA52c = 1 ~1,
+   #                   RA54c = 1 ~1,
+   #                   RA53d = 1 ~1,
+   #                   RA55d = 1 ~1
+   #                   TRUE ~ 0), # care assistance
+   #  eg_7 = case_when(RA52d = 1 ~1,
+   #                   RA53e = 1 ~1,
+   #                   RA55e = 1 ~1,
+   #                   RA54d = 1 ~1,
+   #                   TRUE ~ 0), # economic assistance
+   #  eg_8 = case_when(RA53a = 1 ~1,
+   #                   RA55a = 1 ~1,
+   #                   TRUE ~ 0), # in-person assistance
+   #  eg_9 = case_when(RA53b = 1 ~1,
+   #                   RA55b = 1 ~1,
+   #                   TRUE ~ 0)
+
+# covid stressors
+
+ds %>%
+  mutate(
+    ec_1 = case_when(MP18 = 1 ~1,
+                     TRUE ~ 0), # close contact
+    ec_2 = case_when(MP21 >= 1 ~1,
+                     TRUE ~ 0), # worried about getting infected
+    ec_2 = case_when(MP23 >= 1 ~1,
+                     TRUE ~ 0), # worried about infecting someone
+    ec_03 = case_when(MP18ab = 1 ~1,
+                     TRUE ~ 0), # infected with COVID
+    ec_04 = case_when(MP22 >=1 ~1,
+                     TRUE ~ 0), # days in isolation
+    ec_05 = case_when(MP25 >= 1 ~ 1,
+                     TRUE ~ 0), # death duie to covid
+    ec_06 = case_when(MP25aa >= 1 ~ 1,
+                     TRUE ~ 0) # death at work
+      )
+
+# trust stressors
+
+ds %>%
+  mutate(
+    et_1 = case_when(MP25g = 0 ~1,
+                     TRUE ~ 0), # trust government
+    et_2 = case_when(MP25ea = 0 ~1,
+                     TRUE ~ 0), # trust information
+    et_3 = case_when(MP25f = 0 ~1,
+                     TRUE ~ 0), # trust work leadership
+    et_4 = case_when(MP25fb = 0~1,
+                     TRUE ~ 0) # trust colleagues
+  )
+
+# appraisal
+
+ds %>%
+  mutate(
+    appraisal = case_when(RA56 = #) # how did pandemic affect you
+  )
+
+
+```
+# cross
+
+# long
+
+

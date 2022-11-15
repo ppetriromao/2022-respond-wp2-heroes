@@ -1,0 +1,108 @@
+HEROES,,,,,,,
+CATEGORY,variable code,variable name ,item description,answer format,wave 1,wave 2,wave 3
+stressor (employment),TR15,new team/functions,"In the past three months, have you been assigned to a new team and/or assigned new functions?",0 No 1 Yes,x,x,x
+stressor (employment),TR16,days worked,How many days have you worked during the past week (over the last 7 days)?,free(?),x,x,x
+stressor (employment),TR17,hours worked per day,"During those days, how many hours did you work on average?",free(?),x,x,x
+"stressor (employment, covid)",MP18aa,work at Covid unit,"Are you working in a COVID-19 unit?
+
+","0: No
+1: Yes",x,x,x
+"stressor (employment, covid)",MP25b,death of patient due to Covid,"In the past three months, have any of the patients with COVID-19 that you cared for passed away?","0: No
+1: Yes",x,x,x
+"stressor (employment, covid)",MP25c,stigma due to job,"In the past three months, I have felt stigmatized or discriminated against as a health worker due to the COVID-19 pandemic.","1: Strongly disagree
+2: Disagree
+3: Agree
+4: Strongly agree",x,x,x
+"stressor (employment, covid)",MP25d,conflicts with family members of COVID-patients,"In the past three months, due to your job, have you experienced any conflictive situations (physical or verbal aggression, accusations of malpractice, etc.) with family members of patients with COVID-19?","0: Not at all
+1: Less than once a month
+2: Monthly
+3: Weekly
+4: Daily or almost daily",x,x,x
+"stressor (employment, covid)",MP25e,violence due to job,"In the past three months, I have experienced violence due to being a health worker during the pandemic.","1: Strongly disagree
+2: Disagree
+3: Agree
+4: Strongly agree",x,x,x
+"stressor (employment, covid)",EP32,need to prioritive COVID-patients,"In the past three months, have you had to decide how to prioritize patients with COVID-19 for treatment?","0: No
+1: Yes
+2: Not applicable",x,x,x
+"stressor (employment, covid)",EP32a,,"How uncomfortable were you with this decision (in terms of feeling remorse, sadness, or anger)?",,x,x,x
+"stressor (employment, covid)",EP27a-d,training received,"In the past three months, have you received specific training on how to clinically manage patients who are suspected or confirmed cases of COVID-19? (Select all that apply)","-No -Yes, in my workplace -Yes, outside of my workplace -Does not apply",x,x,x
+stressor (general),SD08,living with children,Do you live with anyone under 18 years of age?,0: No 1: Yes,x,,
+stressor (general),SD08a,,How many? ,,x,,
+stressor (general),SD09,living with elderly,Do you live with anyone 65 years of age or older?,0: No 1: Yes,x,,
+stressor (general),SD09a,,How many? ,,x,,
+stressor (general),SD10,living with disabled people,Do you live with anyone who has a disability? ,0: No 1: Yes,,,
+stressor (general),SD10a,,How many? ,,,,
+"stressor (covid, exposure)",MP18,contact to COVID-patients,"During the past week, have you been close to patients who were suspected or confirmed cases of COVID-19?","0: No
+1: Yes
+2: I do not know",x,x,x
+"stressor (covid, exposure)",MP21,worries getting Covid,"In the past three months, how worried have you been about about getting COVID-19?","0: Not at all
+1: Slightly
+2: Considerably
+3: Extremely ",x,x,x
+"stressor (covid, exposure)",MP23,worries infecting loved ones,"In the past three months, how worried have you been about infecting your loved ones with COVID-19?","0: Not at all
+1: Slightly
+2: Considerably
+3: Extremely ",x,x,x
+"stressor (covid, infection)",MP18ab,infection proved,"In the past three months, have you tested positive for COVID-19 (SARS-CoV-2)?","0: No
+1: Yes
+2: I do not know",x,x,x
+"stressor (covid, quarantine)",MP22,days in isolation,"In the past three months, how many days have you been in isolation for being a suspected or confirmed case of COVID-19?",number (free),x,x,x
+"stressor (covid, infection)",MP24,infection of loved ones,"In the past three months, have any of your loved ones had COVID-19?","0: No
+1: Yes",x,x,x
+"stressor (covid, life events)",MP25,death of loved ones due to Covid,"In the past three months, have any of your loved ones passed away due to COVID-19?","0: No
+1: Yes",x,x,x
+"stressor (covid, life events)",MP25aa,contact to person at work who died of Covid,"In the past three months, have you had close contact at work with someone who later passed away due to COVID-19?","0: No
+1: Yes",x,x,x
+attitude towards covid regulations,MP25g,trust in governments management,To what extent do you trust that the government can manage the COVID-19 pandemic?,"0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely ",x,x,x
+attitude towards covid regulations,MP25ea,trust in information from government,To what extent do you feel the information you were getting from the government during the COVID-19 pandemic has been truthful?,"0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely ",x,x,x
+attitude towards covid regulations,MP25f,perceived management of COVID by leaders,To what extent do you trust that your workplace (its leadership) can manage the COVID-19 pandemic?,"0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely ",x,x,x
+attitude towards covid regulations,MP25fb,perceived management of COVID by colleagues,"To what extend do you trust that your work colleagues can manage the COVID-19 pandemic?
+
+
+
+","0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely ",x,x,x
+stressor (general),,,"In the past three months, even if you have not received them, have you required any of the following specific supports due to the pandemic? (Select all that apply, or none)",Yes No,,x,x
+stressor (general),RA52a,Checks,Psychological support,Yes No,,x,x
+stressor (general),RA52b,Checks,Child care assistance,Yes No,,x,x
+stressor (general),RA52c,Checks,Care assistance for older adults and/or individuals who have a disability,Yes No,,x,x
+stressor (general),RA52d,Checks,Economic assistance,Yes No,,x,x
+stressor (general),RA53a,Checks,In-person psychological support ,Yes No,,x,x
+stressor (general),RA53b,Checks,"Long-distance psychological support (e.g., by phone, online, by video call or video conference, by chat or through an application)",Yes No,,x,x
+stressor (general),RA53c,Checks,Child care assistance,Yes No,,x,x
+stressor (general),RA53d,Checks,Care assistance for older adults and/or individuals who have a disability,Yes No,,x,x
+stressor (general),RA53e,Checks,Economic assistance,Yes No,,x,x
+stressor (general),RA54a,Checks,Psychological support,Yes No,,x,x
+stressor (general),RA54b,Checks,Child care assistance,Yes No,,x,x
+stressor (general),RA54c,Checks,Care assistance for older adults and/or individuals who have a disability,Yes No,,x,x
+stressor (general),RA54d,Checks,Economic assistance,Yes No,,x,x
+stressor (general),RA55a,Checks,In-person psychological support,Yes No,,x,x
+stressor (general),RA55b,Checks,"Long-distance psychological support (e.g., by phone, online, by video call or video conference, by chat or through an application)",Yes No,,x,x
+stressor (general),RA55c,Checks,Child care assistance,Yes No,,x,x
+stressor (general),RA55d,Checks,Care assistance for older adults and/or individuals who have a disability,Yes No,,x,x
+stressor (general),RA55e,Checks,Economic assistance,Yes No,,x,x
+stressor (general),RA56,Checks,"How do you believe that the pandemic, and its consequences, have affected your intimate relationships (romantic partners, significant others)?",?,,x,x
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
