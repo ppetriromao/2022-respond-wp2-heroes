@@ -16,13 +16,13 @@ p_load(tidyverse)
 
 # defining and mutating stressors
 
-TR16: days worked, should more than 5 days be a stressor?
-TR17: hours worked on those days == should that be a stressors
-MP25c: stigma, if any agreement then stressor
+TR16: days worked, should more than 5 days be a stressor? *RMT Probably 6-7 days a week should be a stressor: many HCWs did not rest for weeks*.
+TR17: hours worked on those days == should that be a stressors *RMT Hard to interpret: 16- or 24-hour shift are common among HCWs in Spain*
+MP25c: stigma, if any agreement then stressor *RMT We did a paper on this. Is linked to MH. I would include it*
 
-MP25d: frequency of conflicts, does it make sense to count? 
+MP25d: frequency of conflicts, does it make sense to count? *RMT This I don't trust very much. Perhaps MP25e is better (violence due to job)*
 
-EP32a: should we include feeling remorse? is that somehow the stressor severity?
+EP32a: should we include feeling remorse? is that somehow the stressor severity? *We used just EP32 in a previous work and it did fine. Having to discriminate is usually stressing enough and is often followed by remorse. I am also afraid that there may be much more missing data in the EP32a.*
 
 EP27a-d; double check variable code
 
@@ -47,7 +47,7 @@ ds %>%
     ehc_3 = case_when((TR16 > 5 & TR17 > 8)~ 1 ,
                       TRUE ~ 1), #  hours worked on those days
     ehc_4 = case_when(MP18aa = 1~1,
-                      MP18aa = 0 ~1), # covid-19 unit
+                      MP18aa = 0 ~1), # covid-19 unit RMT: strata?
     ehc_5 = case_when(MP25b = 1 ~1,
                       MP25b = 0 ~ 0), # death of patient
     ehc_6 = case_when(MP25c >= 3 ~ 1,
@@ -56,7 +56,7 @@ ds %>%
                       MP25d = 1 ~ 1,
                       MP25d = 2 ~ 3,
                       MP25d = 3 ~ 7,
-                      MP25d = 4 ~14), # conflicts at work
+                      MP25d = 4 ~14), # conflicts at work RMT: strata?
     ehc_8 = case_when(MP25e >= 3 ~ 1,
                       MP25e < 3 ~ 0), # violence due to health worker
     ehc_9 = case_when(EP32 = 1 ~1,
@@ -65,12 +65,14 @@ ds %>%
     ehc_10 = case_when(EP27a = 1 ~ 1,
                        EP27b = 1 ~ 0,
                        EP27c = 1 ~ 0,
-                       EP27d = 1 ~ 0) # received training or not
+                       EP27d = 1 ~ 0) # received training or not RMT: strata?
     )
 
 # general stressors
 
 ## so here I wasn't sure whether the issue you described with psychol support means that the same variable was assessed under different names, if so I would suggest an alternative below
+
+## RMT: remove support in general; keep social support at work as strata
 
 ds %>%
   mutate(
@@ -118,7 +120,7 @@ ds %>%
                      TRUE ~ 0) # economic assistance
   )
 
-## alternative if this is the renaming issue
+## alternative if this is the renaming issue RMT: do not include
 
    # eg_4 = case_when(RA52a = 1 ~1,
    #                  RA54a = 1 ~1,
@@ -165,7 +167,7 @@ ds %>%
                      TRUE ~ 0) # death at work
       )
 
-# trust stressors
+# trust stressors RMT: too subjective for strata and probably too non-individual for stressors but think about it
 
 ds %>%
   mutate(
@@ -179,7 +181,7 @@ ds %>%
                      TRUE ~ 0) # trust colleagues
   )
 
-# appraisal
+# appraisal RMT: forget about this :)
 
 ds %>%
   mutate(
