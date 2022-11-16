@@ -1,0 +1,1481 @@
+---
+title: "HEROES Syntax: Baseline and follow-up assessments"
+subtitle: "Spain"
+author: "Roberto Mediavilla"
+date: May 2022
+output: console
+editor_options: 
+  chunk_output_type: console
+---
+# Set working directory
+
+```{r}
+os <- Sys.getenv("OS")
+ifelse(os=="Windows_NT", 
+       setwd("C:/Users/Usuario/OneDrive - UAM/R/heroes"),
+       setwd("~/OneDrive - UAM/R/heroes")) 
+remove(os)
+```
+
+# Set locale
+
+```{r}
+Sys.setlocale(category = "LC_ALL", locale = "es")
+```
+
+# Install required packages
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+# Read raw datasets
+
+```{r}
+raw_t0 <- 
+  readr::read_csv2("20210329_heroes_t0.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE,
+                  skip = 1)
+
+headers <- raw_t0[1,]
+colnames(raw_t0) <- headers
+raw_t0 <- raw_t0[-1,]
+remove(headers)
+
+raw_t1 <- 
+  readr::read_csv2("20210329_heroes_t1.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE,
+                  skip = 1)
+
+headers <- raw_t1[1,]
+colnames(raw_t1) <- headers
+raw_t1 <- raw_t1[-1,]
+remove(headers)
+
+raw_t2 <- 
+  readr::read_csv2("20220526_heroes_t2.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE)
+
+headers <- raw_t2[1,]
+colnames(raw_t2) <- headers
+raw_t2 <- raw_t2[-1,]
+remove(headers)
+```
+
+# Merge datasets
+
+## Repeated columns
+
+I found that two of the datasets have repeated colnamnes, which will become a problem later on. Since I am not interested in those variables, I just remove them
+
+```{r}
+data.frame(cn = names(raw_t0)) %>%
+  group_by(cn) %>%
+  summarize(cnt = n()) %>% 
+  arrange(desc(cnt))
+
+raw_t0 <- 
+  raw_t0 %>% 
+  select(!starts_with("PCL"))
+
+data.frame(cn = names(raw_t1)) %>%
+  group_by(cn) %>%
+  summarize(cnt = n()) %>% 
+  arrange(desc(cnt)) # No repeated cols
+
+data.frame(cn = names(raw_t2)) %>%
+  group_by(cn) %>%
+  summarize(cnt = n()) %>% 
+  arrange(desc(cnt))
+```
+
+Although it says that there are no repeated colnames, there would be four after next step (when I rename colnames at T2). I will delete these items
+
+```{r}
+raw_t2 <- 
+  raw_t2 %>% 
+  select(!starts_with("BR"))
+```
+
+## Wrong colnames
+
+I need to rename the variables in the raw_t2 dataset
+
+```{r}
+colnames(raw_t2)
+```
+
+They put a hyphen in the variable name "fecha_inicio"
+
+```{r}
+raw_t2 <- 
+  raw_t2 %>% 
+  rename(`Fecha inicio` = "Fecha_inicio",
+         `Fecha fin` = "Fecha_fin")
+```
+
+```{r}
+raw_t2_colnames <- colnames(raw_t2)
+```
+
+```{r}
+raw_t2_colnames_edited <- 
+  str_replace(raw_t2_colnames,
+            "[:alnum:]+3",
+            "")
+```
+
+```{r}
+raw_t2_colnames_edited <- 
+  str_replace(raw_t2_colnames_edited,
+              "^_", "")
+```
+
+Check
+
+```{r eval = FALSE}
+ds_colnames <- bind_cols(raw_t2_colnames,
+                         raw_t2_colnames_edited)
+View(ds_colnames) # Bingo
+rm(ds_colnames)
+```
+
+```{r}
+colnames(raw_t2) <- raw_t2_colnames_edited
+```
+
+```{r}
+rm(raw_t2_colnames,
+   raw_t2_colnames_edited)
+```
+
+## Inconsistencies in column names
+
+*This is how the psychological support section is structured at T0*
+
+**RA52**	Selección Múltiple	Since the beginning of the pandemic, have you needed psychological support (even if you have not received it)? 	
+0: No
+1: Yes
+**RA52a**	Selección Múltiple	Have you received in-person psychological support?
+0: No
+1: Yes
+**RA52b**	Selección Múltiple	How much did it help you?	
+0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely 
+**RA52c**	Selección Múltiple	Have you received long-distance psychological support (e.g. by phone, online, by video call or video conference, by chat, or through an application)? 	
+0: No
+1: Yes
+**RA52d**	Selección Múltiple	How much did it help you?
+0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely 
+
+*And this is how it is structured at T1 and T2*
+
+RA52a	Checks	In the past three months, even if you have not received them, have you required any of the following specific supports due to the pandemic? (Select all that apply, or none)	1:00
+		Psychological support	0:00
+		
+		RA53a	Checks	In the past three months, have you received any of the following supports due to the pandemic? (Select all that apply, or none)	1:00
+		In-person psychological support 	0:00
+RA53b	Checks	In the past three months, have you received any of the following supports due to the pandemic? (Select all that apply, or none)	1:00
+		Long-distance psychological support (e.g., by phone, online, by video call or video conference, by chat or through an application)	0:00
+
+First, I separately create new variables at waves 1 and waves 2-3.
+
+```{r}
+raw_t0 %>% 
+  mutate(ps_need = RA52 %>% 
+           as_factor()) -> raw_t0 # Needed psychological support
+
+raw_t1 %>% 
+  mutate(ps_need = RA52a %>% 
+           as_factor()) -> raw_t1 # Needed psychological support
+
+raw_t2 %>% 
+  mutate(ps_need = RA52a %>% 
+           as_factor()) -> raw_t2 # Needed psychological support
+
+raw_t0 %>% 
+  mutate(ps_inperson = as_factor(RA52a),
+         ps_online= as_factor(RA52c)) -> raw_t0 # Needed psychological support
+
+raw_t1 %>% 
+  mutate(ps_inperson = as_factor(RA53a),
+         ps_online= as_factor(RA53b)) -> raw_t1 # Needed psychological support
+
+raw_t2 %>% 
+  mutate(ps_inperson = as_factor(RA53a),
+         ps_online= as_factor(RA53b)) -> raw_t2
+```
+
+```{r}
+raw_t0 %>% 
+  select(RA52,
+         RA52a,
+         RA53a,
+         ps_need,
+         ps_inperson,
+         ps_online) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+
+raw_t1 %>% 
+  select(RA52a,
+         RA53a,
+         RA53b,
+         ps_need,
+         ps_inperson,
+         ps_online) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+
+raw_t2 %>% 
+  select(RA52a,
+         RA53a,
+         RA53b,
+         ps_need,
+         ps_inperson,
+         ps_online) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+```
+
+Second, I need to do a transformation to NAs in checklists (waves 2 and 3)
+
+```{r collapse = TRUE}
+raw_t0 %>% 
+  mutate(RA51 = as_factor(RA51)) %>% 
+  select(starts_with("ps"),
+         RA51) %>% # previous
+  skimr::skim()
+
+raw_t1 %>% 
+  mutate(RA51 = as_factor(RA51),
+         RA56 = as_factor(RA56)) %>% 
+  select(starts_with("ps"),
+         RA51, RA56) %>% # previous, next
+         skimr::skim()
+
+raw_t2 %>% 
+  mutate(RA51 = as_factor(RA51),
+         RA56 = as_factor(RA56)) %>% 
+  select(starts_with("ps"),
+         RA51, RA56) %>% # previous, next
+  skimr::skim()
+```
+
+Looking at these descriptives, I think we can make a conservative estimation, meaning that all NAs across "ps_" variables in waves 2 and 3 are actually zeros among those participants who did complete the next item (RA56)
+
+I can't quite understand why there are zeros, though 
+
+```{r}
+raw_t1 %>% 
+  mutate(ps_need_rec = case_when(!is.na(RA56) & is.na(ps_need) ~ "0",
+                                 is.na(RA56) & is.na(ps_need) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0"), # Check this line
+         ) %>%
+  select(starts_with("ps"),
+         RA56) %>% 
+  data.frame # That is what I want to see
+```
+
+```{r}
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_need_rec = case_when(!is.na(RA56) & is.na(ps_need) ~ "0",
+                                 is.na(RA56) & is.na(ps_need) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_need_rec = case_when(!is.na(RA56) & is.na(ps_need) ~ "0",
+                                 is.na(RA56) & is.na(ps_need) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_inperson_rec = case_when(!is.na(RA56) & is.na(ps_inperson) ~ "0",
+                                 is.na(RA56) & is.na(ps_inperson) ~ NA_character_,
+                                 ps_inperson == "1" ~ "1",
+                                 ps_inperson == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_inperson_rec = case_when(!is.na(RA56) & is.na(ps_inperson) ~ "0",
+                                 is.na(RA56) & is.na(ps_inperson) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_online_rec = case_when(!is.na(RA56) & is.na(ps_online) ~ "0",
+                                 is.na(RA56) & is.na(ps_online) ~ NA_character_,
+                                 ps_online == "1" ~ "1",
+                                 ps_online == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_online_rec = case_when(!is.na(RA56) & is.na(ps_online) ~ "0",
+                                 is.na(RA56) & is.na(ps_online) ~ NA_character_,
+                                 ps_online == "1" ~ "1",
+                                 ps_online == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+```
+
+Chequeo valores
+
+```{r}
+raw_t0 %>% 
+  select(RA52,
+         RA52a,
+         RA53a,
+         starts_with("ps")) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+
+raw_t1 %>% 
+  select(RA52a,
+         RA53a,
+         RA53b,
+         starts_with("ps")) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+
+raw_t2 %>% 
+  select(RA52a,
+         RA53a,
+         RA53b,
+         starts_with("ps")) %>% 
+  mutate(across(starts_with("RA"), as_factor)) %>% 
+  skimr::skim() # Values 1 = yes, 0 = no
+```
+
+## Merging CHECK
+
+```{r}
+df <- 
+  bind_rows(raw_t0, 
+            raw_t1,
+            raw_t2,
+          .id = "wave")
+```
+
+```{r eval = FALSE}
+df <- 
+  bind_rows(raw_t0, 
+            raw_t1,
+            raw_t2,
+          .id = "dataset")
+```
+
+## Basic descriptive metadata
+
+```{r}
+df %>% 
+  group_by(Identificador) %>% 
+  count() %>% 
+  filter(n == 3) # n = 333 observations did three assessment waves
+```
+
+```{r}
+df %>% 
+  group_by(Identificador) %>% 
+  count() %>% 
+  filter(n == 2) # n = 688 did two assessment waves
+```
+
+```{r}
+df %>% 
+  group_by(Identificador) %>% 
+  count() %>% 
+  filter(n == 1) # n = 2539 did one assessment wave
+```
+
+# ANONYMISED dataset (for HEROES)
+
+## Create new variables
+
+### Age range
+
+```{r}
+df %>% 
+  mutate(EDAD_range = case_when(EDAD > 15 & EDAD < 26 ~ "< 25",
+                                EDAD > 25 & EDAD < 36 ~ "26-35",
+                                EDAD > 35 & EDAD < 46 ~ "36-45",
+                                EDAD > 45 & EDAD < 56 ~ "46-55",
+                                EDAD > 55 & EDAD < 66 ~ "56-65",
+                                EDAD > 65 ~ "< 65"),
+         EDADV2_range = case_when(EDADV2 > 15 & EDADV2 < 26 ~ "< 25",
+                                EDADV2 > 25 & EDADV2 < 36 ~ "26-35",
+                                EDADV2 > 35 & EDADV2 < 46 ~ "36-45",
+                                EDADV2 > 45 & EDADV2 < 56 ~ "46-55",
+                                EDADV2 > 55 & EDADV2 < 66 ~ "56-65",
+                                EDADV2 > 65 ~ "< 65")
+         ) %>% 
+  select(EDAD_range) %>% 
+  filter(!is.na(.)) # check (n.valid = 2,311/4914)
+```
+
+```{r}
+df %>% 
+  mutate(EDAD_range = case_when(EDAD > 15 & EDAD < 26 ~ "< 25",
+                                EDAD > 25 & EDAD < 36 ~ "26-35",
+                                EDAD > 35 & EDAD < 46 ~ "36-45",
+                                EDAD > 45 & EDAD < 56 ~ "46-55",
+                                EDAD > 55 & EDAD < 66 ~ "56-65",
+                                EDAD > 65 ~ "< 65"),
+         EDADV2_range = case_when(EDADV2 > 15 & EDADV2 < 26 ~ "< 25",
+                                EDADV2 > 25 & EDADV2 < 36 ~ "26-35",
+                                EDADV2 > 35 & EDADV2 < 46 ~ "36-45",
+                                EDADV2 > 45 & EDADV2 < 56 ~ "46-55",
+                                EDADV2 > 55 & EDADV2 < 66 ~ "56-65",
+                                EDADV2 > 65 ~ "< 65")
+         ) %>% 
+  select(EDADV2_range) %>% 
+  filter(!is.na(.)) # check (n.valid = 1,715/4914)
+```
+
+```{r}
+df %>% 
+  select(EDADRCHV2) %>% 
+  filter(!is.na(.)) %>% 
+  mutate(EDADRCHV2 = as.integer(EDADRCHV2)) %>% 
+  summarise(mean = mean(EDADRCHV2, na.rm = T)) # Nothing
+```
+
+```{r}
+df %>% 
+  select(EDADRCH) %>% 
+  filter(!is.na(.)) %>% 
+  mutate(EDADRCH = as.integer(EDADRCH)) %>% 
+  summarise(mean = mean(EDADRCH, na.rm = T)) # Nothing
+```
+
+```{r}
+df %>% 
+  mutate(EDAD_range = case_when(EDAD > 15 & EDAD < 26 ~ "< 25",
+                                EDAD > 25 & EDAD < 36 ~ "26-35",
+                                EDAD > 35 & EDAD < 46 ~ "36-45",
+                                EDAD > 45 & EDAD < 56 ~ "46-55",
+                                EDAD > 55 & EDAD < 66 ~ "56-65",
+                                EDAD > 65 ~ "< 65"),
+         EDADV2_range = case_when(EDADV2 > 15 & EDADV2 < 26 ~ "< 25",
+                                EDADV2 > 25 & EDADV2 < 36 ~ "26-35",
+                                EDADV2 > 35 & EDADV2 < 46 ~ "36-45",
+                                EDADV2 > 45 & EDADV2 < 56 ~ "46-55",
+                                EDADV2 > 55 & EDADV2 < 66 ~ "56-65",
+                                EDADV2 > 65 ~ "< 65")
+         ) -> df
+```
+
+### Dates
+
+First, I create a variable showing the number of minutes used to complete the survey
+
+```{r}
+df %>% 
+  mutate(
+    across(
+      .cols = contains("Fecha"),
+      .fns = as_datetime
+    )
+  ) %>% 
+  mutate(
+    survey_duration = `Fecha fin` - `Fecha inicio`
+  ) -> df
+```
+
+Then, I create two new variables and I take out the time information
+
+```{r}
+df %>% 
+  mutate(fecha_inicio_anonymised = as_date(`Fecha inicio`),
+         fecha_fin_anonymised = as_date(`Fecha fin`)) -> df
+```
+
+## Delete sensitive data
+
+Convertir en NA EDAD, fecha de nacimiento, texto libre (contains(tex), contains(esp), SP67), Fecha inicio, Fecha Fin, Código postal (SD01a), Centro de trabajo (SD11a, SD11b)
+
+```{r}
+df %>% 
+  select(`Fecha inicio`,
+         `Fecha fin`) %>% 
+  mutate(
+    across(
+      .cols = everything(),
+      ~NA_character_
+    )
+  )
+```
+
+```{r}
+df %>% 
+  mutate(
+    across(
+      .cols = c(`Fecha inicio`,
+                `Fecha fin`,
+                SD01a,
+                EDAD,
+                EDADV2,
+                EDADRCH,
+                EDADRCHV2,
+                contains("tex"),
+                contains("esp"),
+                SP67,
+                SD11a,
+                SD11b),
+      ~ NA_character_
+    )
+  ) -> df_anonymised
+```
+
+### IDs (final step)
+
+```{r}
+library(openssl)
+```
+
+```{r}
+df_anonymised %>% 
+  mutate(hashed_id = md5(Identificador)) -> df_anonymised
+```
+
+```{r}
+df_anonymised %>% 
+  group_by(hashed_id) %>% 
+  count() %>% 
+  filter(n == 3) # Works
+```
+
+```{r}
+df_anonymised <- 
+  df_anonymised %>% 
+  mutate(
+    across(
+      .cols = c(ID, Identificador),
+      ~ NA_character_)
+  )
+```
+
+```{r eval = FALSE}
+df_anonymised %>% 
+  arrange(.,
+          hashed_id) %>% 
+  write.csv(.,
+            "heroes_spain_anonymised.csv")
+```
+
+# Select relevant variables for Spain
+
+```{r}
+df <- 
+  df %>% 
+  select(1:6,
+         starts_with(c("SD",
+                       "TR",
+                       "MP",
+                       "EP", 
+                       "AD", 
+                       "PHQ", 
+                       "TEA",
+                       "PCPTSD",
+                       "RA",
+                       "RE",
+                       "IS",
+                       "SP",
+                       "EDAD",
+                       "ps_")), # New 10-09-2022
+         c("V10":"V3"),
+         "IMC") %>% 
+  select(!ends_with(c("_AUS", 
+                      "_PE", 
+                      "_PR"))) %>% 
+  select(!starts_with(c("phq_"))) %>% 
+  select(!c("PHQ76a",
+            "PHQSCR",
+            "PHQ76new", ## loneliness
+            "PHQSCRV2",
+            "AD45a",
+            "EDADRCH")) 
+```
+
+# Transform variables
+
+## Required transformations
+
+Existen dos variables de "edad" que deben converger en una sola
+
+```{r}
+df %>% 
+  mutate(edad =
+           if_else(is.na(EDAD),EDADV2,EDAD)) %>% 
+  mutate(edad = as.numeric(edad)) %>% 
+  select(edad) %>% 
+  summary() # IT WORKS
+
+df <- 
+  df %>% 
+  mutate(edad =
+           if_else(is.na(EDAD),EDADV2,EDAD)) %>% 
+  mutate(edad = as.numeric(edad))
+```
+
+También debemos calcular una nueva variable para tipo de trabajo (más adelante)
+
+```{r eval = FALSE}
+df %>% 
+  group_by(wave) %>% 
+  select(TR14) %>% 
+  table() ## "otros" = 198 + 233 = 431
+
+df <- 
+  df %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "farm|FARM|Farm"),
+                        "25")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "bio|Bio|BIO|bió|Bió|BIÓ"),
+                        "26")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "administr|Administr|ADMINISTR"),
+                        "18")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Enfermer|enfermer|ENFERMER"),
+                        "2")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Matr|matr|MATR"),
+                        "13")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Psic|psic|PSIC"),
+                        "4")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "elador|ELADOR"),
+                        "19")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "OGOP|ogop"),
+                        "14")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "avand|Barb|barb|encer"),
+                        "21")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "isiot|ISIOT"),
+                        "8")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "rabaj|RABAJ"),
+                        "5")) %>%   
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "ASTREAD|astread"),
+                        "31")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "edic|édic|EDIC|ÉDIC"),
+                        "1")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "siq"),
+                        "1")) %>%  
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "onito|ONITO"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "duca|DUCA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "uida|UIDA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "residencia|RESIDENCIA|Residencia|
+                                   residencial|Residencial|RESIDENCIAL"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "faisem|FAISEM|Faisem"),
+                        "30"))
+
+df %>% 
+  group_by(wave) %>% 
+  select(TR14) %>% 
+  table() ## "otros" = 43 + 40 = 83
+
+df <- 
+  df %>% 
+  mutate(
+    jobtype = fct_collapse(TR14,
+                           "physician" = "1",
+                           "nurse" = c("2","13"),
+                           "health technician" = c("3","6","7"),
+                           "ancillary worker" = c("18":"23"),
+                           "other HCW" = c("4","5","8","9","10","11",
+                                           "12","14","15","25","26","31"),
+                           "socio-community" = c("27":"30"),
+                           "other" = c("16","17","24")
+                           
+    )
+  )
+
+# Incluyo rastreadores (31) en Other HCWs
+
+df %>% 
+  group_by(wave) %>% 
+  select(jobtype) %>% 
+  table
+
+## 182 other (83 + 46 + 53)
+```
+
+Antecedentes de salud mental
+
+```{r eval = FALSE}
+df <- 
+  df %>% 
+  mutate(SP65 = ifelse(SP65 == "2",
+                       NA_character_,
+                       SP65) %>% 
+           as.factor) #FIXME: lo quito porque es redundante con next chunk
+```
+
+PENDIENTE: centro de trabajo, frontline?
+
+## Set NAs and others
+
+Faltaría buscar valores extremos en edad, número de convivientes, etc.
+
+```{r}
+df <- 
+  df %>% 
+  mutate(SD03 = recode(SD03,"2" = NA_character_),
+         SD05 = recode(SD05, "6" = NA_character_),
+         SD06 = recode(SD06, "6" = NA_character_),
+         TR13 = recode(TR13, "5" = NA_character_),
+         MP19 = recode(MP19, "4" = NA_character_),
+         MP25b = recode(MP25b, "3" = NA_character_),
+         EP31 = recode(EP31, "2" = NA_character_),
+         EP32 = recode(EP32,
+                       "2" = NA_character_, 
+                       "3" = NA_character_),
+         EP32a = recode(EP32a, "4" = NA_character_),
+         SP64 = recode(SP64, "2" = NA_character_),
+         SP65 = recode(SP65, "2" = NA_character_),
+         SP66 = recode(SP66, "2" = NA_character_),
+         SP66b1 = recode(SP66b1, "6" = NA_character_),
+         SP66b2 = recode(SP66b2, "6" = NA_character_),
+         SP66b3 = recode(SP66b3, "6" = NA_character_),
+         SP66b4 = recode(SP66b4, "6" = NA_character_),
+         SP66b5 = recode(SP66b5, "6" = NA_character_),
+         SP66b6 = recode(SP66b6, "6" = NA_character_),
+         SP66b7 = recode(SP66b7, "6" = NA_character_),
+         )
+df <- 
+  df %>% 
+  mutate(edad = replace(edad, edad>=70,NA))
+
+df <- 
+  df %>% 
+  mutate(MP18aa = recode(MP18aa, "2" = "0"))
+```
+
+## Factors and numeric vectors
+
+```{r}
+df <- 
+  df %>% 
+  mutate(
+    across(
+      .cols = starts_with("Fecha"),
+      .fns = ymd_hms
+    )
+  ) %>% 
+  mutate(
+    across(
+      .cols = 
+        !ends_with(c("_esp", 
+                     "ex", 
+                     "otro",
+                     "SD11b")) & 
+        !starts_with(c("Fecha",
+                       "ps_")) & # New
+        !"Identificador",
+      .fns = as.numeric
+      )
+  ) %>% 
+  mutate(
+    across(
+      .cols = 
+        !c("SD07",
+           "SD08a",
+           "SD09a", 
+           "SD10a", 
+           "SD01a", 
+           "SD02a", 
+           "TR16",
+           "TR17",
+           "MP22",
+           "MP18a",
+           "SD11", 
+           "RA61", 
+           "RA62", 
+           "SP65b", 
+           "IMC") & 
+        !ends_with(c("_esp", 
+                     "ex", 
+                     "otro", 
+                     "SD11b")) &
+        !starts_with(c("Fecha",
+                       "EDAD",
+                       "PCPTSD",
+                       "TEA",
+                       "AD",
+                       "PHQ",
+                       "RE")),  
+      .fns = as.factor
+    )
+  )
+
+```
+
+```{r eval = FALSE}
+df <- 
+  df %>% 
+  mutate(
+    across(
+      .cols = starts_with("Fecha"),
+      .fns = as_date
+    )
+  )
+```
+
+## Ordered factors
+
+```{r eval = FALSE}
+df <- 
+  df %>% 
+  mutate(
+    across(
+      .cols = c("SD04",
+                "SD05",
+                "SD06",
+                "MP19",
+                "MP21",
+                "MP23",
+                "MP25c",
+                "MP25d",
+                "MP25e",
+                "MP25g",
+                "MP25f",
+                "EP32a",
+                "RA50",
+                "RA51",
+                "RA52b",
+                "RA52d",
+                "RA53d",
+                "RA54b",
+                "RA55b",
+                "IS46b",
+                "IS46aa",
+                "MP25fb",
+                "MP25ea",
+                "RA56",
+                "RA57",
+                "RA58",
+                "RA59",
+                "V3",
+                "V13") &
+        starts_with(c("AD",
+                    "PHQ",
+                    "TEA",
+                    "RE",
+                    "PCPTSD",
+                    "RA60")),
+      .fns = as.ordered
+    )
+  )
+
+```
+
+# Create new variables
+
+## GHQ-12
+
+```{r}
+
+# I create a GHQ total score before recoding the items
+# (it should go from 0 to 36)
+
+df %>% 
+  mutate(
+    GHQt = select(., starts_with("AD")) %>% rowSums()) %>% 
+  select(starts_with("AD"),
+         GHQt) # I check NAs
+
+df <- 
+  df %>% 
+  mutate(
+    GHQt = select(., starts_with("AD")) %>% rowSums()
+    )
+
+summary(df$GHQt)
+
+# I create the GHQs after recoding the items
+
+df <- 
+  df %>% 
+  mutate(
+    across(
+      .cols = starts_with("AD"),
+      .fns = ~recode(.,
+             "0" = 0,
+             "1" = 0,
+             "2" = 1,
+             "3" = 1)
+    )
+  )
+
+df <- 
+  df %>% 
+  mutate(GHQs = select(., starts_with("AD")) %>% rowSums())
+
+summary(df$GHQs)
+
+```
+
+## PHQ-9
+
+```{r}
+df <- 
+  df %>% 
+  mutate(PHQt = select(., c("PHQ68":"PHQ76")) %>% rowSums())
+
+df %>% select(PHQt) %>% summary()
+```
+
+## PC-PTSD-5
+
+```{r}
+df <- 
+  df %>% 
+  mutate(PCPTSDt = select(., starts_with("PCPTSD")) %>% rowSums())
+```
+
+## BRS
+
+```{r}
+df <- 
+  df %>% 
+  mutate(BRSt = select(., c("RE57":"RE63")) %>% rowSums()/6)
+
+df %>% select(BRSt) %>% summary()
+```
+
+## Jobtype
+
+```{r}
+df %>% 
+  group_by(wave) %>% 
+  select(TR14) %>% 
+  table() ## "otros" = 198 + 233 = 431
+
+df <- 
+  df %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "farm|FARM|Farm"),
+                        "25")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "bio|Bio|BIO|bió|Bió|BIÓ"),
+                        "26")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "administr|Administr|ADMINISTR"),
+                        "18")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Enfermer|enfermer|ENFERMER"),
+                        "2")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Matr|matr|MATR"),
+                        "13")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Psic|psic|PSIC"),
+                        "4")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "elador|ELADOR"),
+                        "19")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "OGOP|ogop"),
+                        "14")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "avand|Barb|barb|encer"),
+                        "21")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "isiot|ISIOT"),
+                        "8")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "rabaj|RABAJ"),
+                        "5")) %>%   
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "ASTREAD|astread"),
+                        "31")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "edic|édic|EDIC|ÉDIC"),
+                        "1")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "siq"),
+                        "1")) %>%  
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "onito|ONITO"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "duca|DUCA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "uida|UIDA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "residencia|RESIDENCIA|Residencia|
+                                   residencial|Residencial|RESIDENCIAL"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "faisem|FAISEM|Faisem"),
+                        "30"))
+
+df %>% 
+  group_by(wave) %>% 
+  select(TR14) %>% 
+  table() ## "otros" = 43 + 40 = 83
+
+df <- 
+  df %>% 
+  mutate(
+    jobtype = fct_collapse(TR14,
+                           "physician" = "1",
+                           "nurse" = c("2","13"),
+                           "health technician" = c("3","6","7"),
+                           "ancillary worker" = c("18":"23"),
+                           "other HCW" = c("4","5","8","9","10","11",
+                                           "12","14","15","25","26","31"),
+                           "socio-community" = c("27":"30"),
+                           "other" = c("16","17","24")
+                           
+    )
+  )
+
+# Incluyo rastreadores (31) en Other HCWs
+
+df %>% 
+  group_by(wave) %>% 
+  select(jobtype) %>% 
+  table
+
+## 182 other (83 + 46 + 53)
+```
+
+## CCAAs
+
+```{r}
+df <- 
+  df %>% 
+  mutate(ccaa_iso = fct_recode(SD01,
+                               "AN" = "17",
+                               "AR" = "18",
+                               "AS" = "19",
+                               "IB" = "20",
+                               "CN" = "21",
+                               "CB" = "22",
+                               "CL" = "23",
+                               "CM" = "24",
+                               "CT" = "25",
+                               "VC" = "26",
+                               "EX" = "27",
+                               "GA" = "28",
+                               "MD" = "29",
+                               "MC" = "30",
+                               "NC" = "31",
+                               "PV" = "32",
+                               "RI" = "33",
+                               "CE" = "34",
+                               "ML" = "35",
+                               NULL = "118",
+                                NULL = "173",
+                                NULL = "284",
+                                NULL = "326",
+                                NULL = "422"
+                               ) 
+         )
+
+levels(df$ccaa_iso)
+```
+
+## Facility / center
+
+```{r}
+df %>% 
+  select(wave,ccaa_iso,SD11a, SD11b) %>% 
+  filter(wave == "2") %>% 
+  filter(!is.na(SD11b)) # 765 centros pendientes de recategorizar
+```
+
+```{r}
+df %>% 
+  select(wave, SD11a) %>% 
+  filter(wave == "2",
+         SD11a == "0") %>%
+  count() ## n = 780 con "otros" en centro (780 - 765 = 15 no recategorizables)
+```
+
+
+En España tenemos estas categorías de centro
+
+8: Centro de Salud Los Barreros (Murcia)
+9: Preventive Medicine Service (Hospital Clínico Universitario Virgen de la Arrixaca)
+10: Centro de Salud Isaac Peral (Murcia)
+11: Centro de Salud San Andrés (Murcia)
+12: Pediatrics Service (Hospital Clínico Universitario Virgen de la Arrixaca en Murcia)
+13: Centro de Salud Mental Cartagena (Murcia)
+14: Rheumatology Service (Hospital Clínico Universitario Virgen de la Arrixaca en Murcia)
+15: Oncology Services (Servicio de Oncología (Hospital Clínico Universitario Virgen de la Arrixaca en Murcia)
+16: Unidad de Urgencias del Distrito Sanitario de Málaga
+17: Centro de Salud Alameda Perchel (Málaga)
+18: FAISEM (Andalucia)
+19: Hospital Universitario La Paz (Madrid)
+20: Centro de Salud (Madrid)
+63: Centro de Salud Bustarviejo (Madrid)
+64: Centro de Salud Castroviejo (Madrid)
+65: Centro de Salud Barrio del Pilar (Madrid)
+66: Centro de Salud Colmenar Viejo Sur (Madrid)
+78: Centro de Rehabilitación Psicosocial de GRUPO 5
+
+```{r eval = FALSE}
+df <-
+  df %>% 
+  mutate(SD11a_rec = SD11a) # Variable donde recodificar los valores 0
+
+df <-
+  df %>% 
+  mutate(SD11a_rec = as.numeric(as.character(SD11a))) # la necesito numérica 
+                                        # para que no haya niveles 
+                                        # que no reconoce
+
+df %>% 
+  select(SD11a, SD11a_rec) %>% 
+  drop_na() # funciona
+
+df <- 
+  df %>% 
+  mutate(SD11b = tolower(SD11b))
+
+df <- 
+  df %>% 
+  mutate(SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b,"barrero"),
+                             "8"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "prev"),
+                             "9"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "isaac"),
+                             "10"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "andr"),
+                             "11"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "pedia"),
+                             "12"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "tagen"),
+                             "13"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "reum"),
+                             "14"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "oncol"),
+                             "15"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "alameda"),
+                             "17"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "perch"),
+                             "17"),         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "faisem"),
+                             "18"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "casa"),
+                             "18"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "vivienda"),
+                             "18"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "hogar"),
+                             "18"),         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "paz"),
+                             "19"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "tercer"),
+                             "19"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "cantobl"),
+                             "19"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "bustar"),
+                             "63"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "castro"),
+                             "64"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "pilar"),
+                             "65"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "colmen"),
+                             "66"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "grupo"),
+                             "78"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "conserje"), # Consejería Murcia
+                             "97"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "conseje"), # Consejería Murcia
+                             "97"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "epidem"),
+                             "97"),         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "rastr"),
+                             "97"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "valme"), # Valme
+                             "98"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "almanj"), # Almanjáyar
+                             "99"),
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "cecil"),
+                             "100"), # San Cecilio
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "cartuja"),
+                             "101"), # Cartuja
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "ermana"),
+                             "102"), # Dos Hermanas
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "capit"),
+                             "103"), # Gran Capitán
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "tetu"),
+                             "104"), # CSM Tetuán
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "regional"),
+                             "105"), # Hospital Regional Universitario Málaga
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "arrixaca"),
+                             "106"), # HCUVA otros servicios
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "talarru"),
+                             "107"),   #CS Talarrubias Badajoz      
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "cajal"),
+                             "108"),  # H Ramón y Cajal    
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "asturias"),
+                             "109"),  # H Príncipe de Asturias
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "valdecilla"),
+                             "110"), # H Marqués de Valdecilla         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "virgen de la victoria"),
+                             "111"), # H Vírgen de la Victoria Málaga         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "rinc"),
+                             "112"), # CS Rincón de la Victoria Málaga         
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "puerto real"),
+                             "113"), # H Puerto Real Cádiz
+         SD11a_rec = replace(SD11a_rec,
+                             str_detect(SD11b, "arcos"),
+                             "114"),    # H Arcos Murcia    
+         )
+
+# Check
+
+df %>% 
+  select(SD11a_rec) %>% 
+  filter(SD11a_rec == "0") %>% 
+  count()
+
+df %>% 
+  select(SD11a_rec, SD11b, ccaa_iso, jobtype) %>% 
+  filter(SD11a_rec == "0") %>% 
+  View()
+
+```
+
+```{r eval = FALSE}
+df %>% 
+  mutate(SD11a_rec = as.factor(SD11a_rec)) %>% 
+  select(SD11a_rec) %>%
+  drop_na() %>% 
+  count(SD11a_rec) %>% 
+  arrange(desc(n))
+```
+
+
+# Remove observations
+
+There are certain observations that must be removed for different reasons
+
+```{r eval = FALSE}
+df %>% 
+  filter(wave == "1" & `Fecha inicio` <= "2020-06-22 04:00:00", 
+         wave == "1" & `Fecha inicio` > "2020-04-23") %>% 
+  select(`Fecha inicio`) %>% 
+  count()
+
+df %>% filter(wave == "1") %>% count()
+
+# Sorprendementemente hay una observación menos que en el dataset
+# utilizado para los primeros análisis (n = 2475), aun después de filtrar
+# por tiempo con exactitud
+## Identifico que es la observación 349, que se eliminará porque está vacía
+  
+df %>% 
+  filter(wave == "1" & `Fecha inicio` <= "2020-06-22 04:00:00", 
+         wave == "1" & `Fecha inicio` > "2020-04-23") %>% 
+  filter(wave == "1" & 
+           !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221")) %>% 
+  count() # n = 2466 (vs. 2367 en original)
+
+df %>% 
+  filter(wave == "1" & `Fecha inicio` <= "2020-06-22 04:00:00", 
+         wave == "1" & `Fecha inicio` > "2020-04-23") %>% 
+  filter(wave == "1" & 
+           !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221")) %>%
+  filter(!is.na(SD01)) %>% 
+  count() # n = 2372 (vs. 2370 en original)
+
+df %>% 
+  if_else(wave == "1",
+          filter(`Fecha inicio` <= "2020-06-22 04:00:00",
+                 `Fecha inicio` > "2020-04-23") %>% 
+            filter(!ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221")),
+  filter(ever))
+
+df %>% 
+  filter(wave == "2" | 
+           `Fecha inicio` <= "2020-06-22 04:00:00" & `Fecha inicio` > "2020-04-23" |
+           !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221") |
+           !is.na(SD01))
+
+
+df %>% 
+  filter(wave == "2" | `Fecha inicio` <= "2020-06-22 04:00:00" & `Fecha inicio` > "2020-04-23") %>% 
+  filter(wave == "2" | !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221")) %>% 
+  filter(wave == "2" | !is.na(SD01))
+
+df %>% 
+  filter(wave == "2" | between(`Fecha inicio`, "2020-04-23","2020-06-22")) %>% 
+  filter(wave == "2" | !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221")) %>% 
+  filter(wave == "2" | !is.na(SD01))
+
+df %>% 
+  filter(`Fecha inicio` <= "2020-06-22 02:00:00" | `Fecha inicio`>= "2021-01-26 00:00:00",
+         !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221"),
+         !is.na(SD01)) %>% 
+  group_by(wave) %>% 
+  count() ## Conseguido. 2373 (vs. 2370) observaciones
+```
+
+```{r eval = FALSE} 
+
+## Esto sirve para que coincida casi exactamente con los
+## valores en baseline
+
+df <- 
+  df %>% 
+  filter(`Fecha inicio` <= "2020-06-22 02:00:00" | `Fecha inicio`>= "2021-01-26 00:00:00",
+         !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221"),
+         !is.na(SD01))
+```
+
+No nos sirve al incluir la 3 ola.
+
+```{r}
+df <- 
+  df %>% 
+  filter(wave == "3" | 
+           `Fecha inicio` <= "2020-06-22 02:00:00" | 
+           `Fecha inicio`>= "2021-01-26 00:00:00",
+         !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221"),
+         !is.na(SD01))
+```
+
+# Ns
+
+```{r}
+df %>% 
+  select(Identificador) %>% 
+  count(Identificador) %>% 
+  filter(n == 3) %>% 
+  select(Identificador) # n = 308 con las tres observaciones
+```
+
+```{r eval = FALSE}
+
+haven::write_sav(janitor::clean_names(df),"20210504_heroes_df.sav")
+
+```
