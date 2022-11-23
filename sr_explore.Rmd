@@ -2,17 +2,77 @@
 title: "sr_explore_heroes"
 author: "Papoula Petri-Romao"
 date: "2022-11-15"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 
 require(pacman)
-p_load(tidyverse)
+p_load(tidyverse,
+       psych,
+       lme4)
+
+ds <- readRDS("data/heroes_wp2_anonymised.rds")
+
 
 ```
 
+currently "prefer not to issues" are not recoded as -992. therefore we are recoding them here. This should run when the final ipd dataset is corrected. 
+
+```{r basic-recoding}
+
+ds <- ds %>%	        
+        
+  mutate(sd03 = recode(sd03,"2"= NA_character_),	        
+        
+         # sd05 = recode(sd05, "6" = NA_character_),	        
+        
+         # sd06 = recode(sd06, "6" = NA_character_),	        
+        
+         # tr13 = recode(tr13, "5" = NA_character_),	        
+        
+         # mp19 = recode(mp19, "4" = NA_character_),	        
+        
+         mp25b = recode(mp25b, "3" = NA_character_),	        
+        
+         # ep31 = recode(ep31, "2" = NA_character_),	        
+        
+         ep32 = recode(ep32,	        
+        
+                       "2"= NA_character_,	        
+        
+                       "3"= NA_character_),	        
+        
+         ep32a = recode(ep32a, "4" = NA_character_),	        
+        
+         # sp64 = recode(sp64, "2" = NA_character_),	        
+        
+         # sp65 = recode(sp65, "2" = NA_character_),	        
+        
+         # sp66 = recode(sp66, "2" = NA_character_),	        
+        
+         sp66b1 = recode(sp66b1, "6" = NA_character_),	        
+        
+         sp66b2 = recode(sp66b2, "6" = NA_character_),	        
+        
+         sp66b3 = recode(sp66b3, "6" = NA_character_),	        
+        
+         sp66b4 = recode(sp66b4, "6" = NA_character_),	        
+        
+         sp66b5 = recode(sp66b5, "6" = NA_character_),	        
+        
+         sp66b6 = recode(sp66b6, "6" = NA_character_),	        
+        
+         sp66b7 = recode(sp66b7, "6" = NA_character_),	        
+        
+        )
+
+```
 
 # defining and mutating stressors
 
@@ -36,36 +96,67 @@ RA56: what are the answer options?
 
 stressors <- read.csv("stressors_heroes.csv")
 
+
 # healthcare worker specific stressors
 
-ds %>%
+ds <- ds %>%
   mutate(
-    ehc_1 = case_when(TR15 = 1 ~ 1,
-                   TR15 = 0 ~ 0), # Assigned to new team in past 3 months
-    ehc_2 = case_when(TR16 > 5 ~ 1,
+    ehc_1 = case_when(tr15 == 1 ~ 1,
+                      tr15 == -991~-991,
+                      tr15 == -993~-993,
+                      tr15 == NA_character_~NA_real_,
+                   tr15 == 0 ~ 0), # Assigned to new team in past 3 months
+    ehc_2 = case_when(tr16 >= 6 ~ 1,
+                      tr16 == -991~-991,
+                      tr16 == -993~-993,
+                      tr16 == NA_character_~NA_real_,
                       TRUE ~ 1), # days worked past week
-    ehc_3 = case_when((TR16 > 5 & TR17 > 8)~ 1 ,
+    ehc_3 = case_when((tr16 > 5 & tr17 >= 12)~ 1,
+                      tr16 == -991~-991,
+                      tr16 == -993~-993,
+                      tr16 == NA_character_~NA_real_,
                       TRUE ~ 1), #  hours worked on those days
-    ehc_4 = case_when(MP18aa = 1~1,
-                      MP18aa = 0 ~1), # covid-19 unit RMT: strata?
-    ehc_5 = case_when(MP25b = 1 ~1,
-                      MP25b = 0 ~ 0), # death of patient
-    ehc_6 = case_when(MP25c >= 3 ~ 1,
-                      MP25c < 3 ~ 0), # stigma
-    ehc_7 = case_when(MP25d = 0 ~ 0,
-                      MP25d = 1 ~ 1,
-                      MP25d = 2 ~ 3,
-                      MP25d = 3 ~ 7,
-                      MP25d = 4 ~14), # conflicts at work RMT: strata?
-    ehc_8 = case_when(MP25e >= 3 ~ 1,
-                      MP25e < 3 ~ 0), # violence due to health worker
-    ehc_9 = case_when(EP32 = 1 ~1,
-                      EP32 = 0 ~ 0,
-                      TRUE ~ 0), # need to prioritise patients
-    ehc_10 = case_when(EP27a = 1 ~ 1,
-                       EP27b = 1 ~ 0,
-                       EP27c = 1 ~ 0,
-                       EP27d = 1 ~ 0) # received training or not RMT: strata?
+    ehc_4 = case_when(mp18aa == 1~1,
+                      mp18aa == 0 ~1,
+                      mp18aa == -991~-991,
+                      mp18aa == NA_character_~NA_real_,
+                      mp18aa == -993~-993), # covid-19 unit RMT: strata?
+    ehc_5 = case_when(mp25b == 1 ~1,
+                      mp25b == 0 ~ 0,
+                      mp25b == -991~-991,
+                      mp25b == NA_character_~NA_real_,
+                      mp25b == -993~-993), # death of patient
+    ehc_6 = case_when(mp25c == 1 ~ 0,
+                      mp25c == 2 ~ 0,
+                      mp25c == 3 ~ 1,
+                      mp25c == 4 ~ 1,
+                      mp25c == 5 ~ 1,
+                      mp25c == NA_character_~NA_real_,
+                      mp25c == -991~-991,
+                      mp25c == -993~-993), # stigma
+    ehc_7 = case_when(mp25d == 0 ~ 0,
+                      mp25d == -991~-991,
+                      mp25d == -993~-993,
+                      mp25d == NA_character_~NA_real_,
+                      TRUE ~ 1), # conflicts at work RMT: strata?
+    ehc_8 = case_when(mp25e == 1 ~ 0,
+                      mp25e == 2 ~ 0,
+                      mp25e == 3 ~ 1,
+                      mp25e == 4 ~ 1,
+                      mp25e == 5 ~ 1,
+                      mp25e == NA_character_~NA_real_,
+                      mp25e == -991~-991,
+                      mp25e == -993~-993), # violence due to health worker
+    ehc_9 = case_when(ep32 == 1 ~1,
+                      ep32 == 0 ~ 0,
+                      ep32 == -991~-991,
+                      ep32 == -993~-993,
+                      ep32== NA_character_~NA_real_,
+                      TRUE ~ 0) # need to prioritise patients
+    # ehc_10 = case_when(EP27a == 1 ~ 1,
+    #                    EP27b == 1 ~ 0,
+    #                    EP27c == 1 ~ 0,
+    #                    EP27d == 1 ~ 0) # received training or not RMT: strata?
     )
 
 # general stressors
@@ -74,124 +165,492 @@ ds %>%
 
 ## RMT: remove support in general; keep social support at work as strata
 
-ds %>%
-  mutate(
-    eg_1 = case_when(SD08 = 1 ~1,
-                     TRUE ~ 0), # living with children
-    eg_2 = case_when(SD09 = 1 ~1,
-                     TRUE ~ 0), # living with elderly
-    eg_3 = case_when(SD10 = 1,
-                     TRUE ~ 0), # living with someone who has disability
-    eg_4 = case_when(RA52a = 1 ~1,
-                     TRUE ~ 0), # psychological support
-    eg_5 = case_when(RA52b = 1 ~1,
-                     TRUE ~ 0), # child care assistance
-    eg_6 = case_when(RA52c = 1 ~1,
-                     TRUE ~ 0), # care assistance
-    eg_7 = case_when(RA52d = 1 ~1,
-                     TRUE ~ 0), # economic assistance
-    eg_8 = case_when(RA53a = 1 ~1,
-                     TRUE ~ 0), # in-person assistance
-    eg_9 = case_when(RA53b = 1 ~1,
-                     TRUE ~ 0), # long-dstaince psychol support
-    eg_10 = case_when(RA53c = 1 ~1, 
-                     TRUE ~ 0), # child care assistance
-    eg_11 = case_when(RA53d = 1 ~1,
-                     TRUE ~ 0), # care assitance for older adults
-    eg_12 = case_when(RA53e = 1 ~1,
-                     TRUE ~ 0), # economic assistance
-    eg_13 = case_when(RA54a = 1 ~1,
-                     TRUE ~ 0), # psychological support
-    eg_14 = case_when(RA54b = 1 ~1,
-                     TRUE ~ 0), # child care assistance
-    eg_15 = case_when(RA54c = 1 ~1,
-                     TRUE ~ 0), # care assistance
-    eg_16 = case_when(RA54d = 1 ~1,
-                     TRUE ~ 0), # economic assistance
-    eg_17 = case_when(RA55a = 1 ~1,
-                     TRUE ~ 0), # in-person assistance
-    eg_18 = case_when(RA55b = 1 ~1,
-                     TRUE ~ 0), # long-dstaince psychol support
-    eg_19 = case_when(RA55c = 1 ~1, 
-                     TRUE ~ 0), # child care assistance
-    eg_20 = case_when(RA55d = 1 ~1,
-                     TRUE ~ 0), # care assitance for older adults
-    eg_21 = case_when(RA55e = 1 ~1,
-                     TRUE ~ 0) # economic assistance
-  )
-
-## alternative if this is the renaming issue RMT: do not include
-
-   # eg_4 = case_when(RA52a = 1 ~1,
-   #                  RA54a = 1 ~1,
-   #                   TRUE ~ 0), # psychological support
-   #  eg_5 = case_when(RA52b = 1 ~1,
-   #                   RA53c = 1 ~1,
-   #                   RA55c = 1 ~1,
-   #                   RA54b = 1 ~1,
-   #                   TRUE ~ 0), # child care assistance
-   #  eg_6 = case_when(RA52c = 1 ~1,
-   #                   RA54c = 1 ~1,
-   #                   RA53d = 1 ~1,
-   #                   RA55d = 1 ~1
-   #                   TRUE ~ 0), # care assistance
-   #  eg_7 = case_when(RA52d = 1 ~1,
-   #                   RA53e = 1 ~1,
-   #                   RA55e = 1 ~1,
-   #                   RA54d = 1 ~1,
-   #                   TRUE ~ 0), # economic assistance
-   #  eg_8 = case_when(RA53a = 1 ~1,
-   #                   RA55a = 1 ~1,
-   #                   TRUE ~ 0), # in-person assistance
-   #  eg_9 = case_when(RA53b = 1 ~1,
-   #                   RA55b = 1 ~1,
-   #                   TRUE ~ 0)
+# ds <- ds %>%
+#   mutate(
+#     eg_1 = case_when(sd08 == 1 ~1,
+#                      TRUE ~ 0), # living with children
+#     eg_2 = case_when(sd09 == 1 ~1,
+#                      TRUE ~ 0), # living with elderly
+#     eg_3 = case_when(sd10 == 1 ~ 1,
+#                      TRUE ~ 0)) # living with someone who has disability
+  
 
 # covid stressors
-
-ds %>%
+ds <- ds %>%
   mutate(
-    ec_1 = case_when(MP18 = 1 ~1,
+    ec_1 = case_when(mp18 == 1 ~1,
+                     mp18 == -991~-991,
+                     mp18 == -993~-993,
+                     mp18 == NA_character_~NA_real_,
                      TRUE ~ 0), # close contact
-    ec_2 = case_when(MP21 >= 1 ~1,
+    ec_2 = case_when(mp21 == 1 ~1,
+                     mp21 == 2 ~1,
+                     mp21 == 3 ~1,
+                     mp21 == -991~-991,
+                     mp21 == -993~-993,
+                     mp21 == NA_character_~NA_real_,
                      TRUE ~ 0), # worried about getting infected
-    ec_2 = case_when(MP23 >= 1 ~1,
+    ec_2 = case_when(mp23 == 1 ~1,
+                     mp23 == 2 ~1,
+                     mp23 == 3 ~1,
+                     mp23 == -991~-991,
+                     mp23 == -993~-993,
+                     mp23 == NA_character_~NA_real_,
                      TRUE ~ 0), # worried about infecting someone
-    ec_03 = case_when(MP18ab = 1 ~1,
+    ec_3 = case_when(mp18ab == 1 ~1,
+                     mp18ab == -991~-991,
+                     mp18ab == -993~-993,
+                     mp18ab== NA_character_~NA_real_,
                      TRUE ~ 0), # infected with COVID
-    ec_04 = case_when(MP22 >=1 ~1,
+    ec_4 = case_when(mp22 >=1 ~1,
+                     mp22 == -991~-991,
+                     mp22 == -993~-993,
+                     mp22 == NA_character_~NA_real_,
                      TRUE ~ 0), # days in isolation
-    ec_05 = case_when(MP25 >= 1 ~ 1,
+    ec_5 = case_when(mp25 == 1 ~ 1,
+                     mp25 == -991~-991,
+                     mp25 == -993~-993,
+                     mp25 == NA_character_~NA_real_,
                      TRUE ~ 0), # death duie to covid
-    ec_06 = case_when(MP25aa >= 1 ~ 1,
+    ec_6 = case_when(mp25aa == 1 ~ 1,
+                     mp25aa == -991~-991,
+                     mp25aa == -993~-993,
                      TRUE ~ 0) # death at work
       )
 
 # trust stressors RMT: too subjective for strata and probably too non-individual for stressors but think about it
+# 
+# ds <- ds %>%
+#   mutate(
+#     et_1 = case_when(mp25g == 0 ~1,
+#                      mp25g == -991~-991,
+#                      mp25g == -993~-993,
+#                      TRUE ~ 0), # trust government
+#     et_2 = case_when(mp25ea == 0 ~1,
+#                      mp25ea == -991~-991,
+#                      mp25ea == -993~-993,
+#                      TRUE ~ 0), # trust information
+#     et_3 = case_when(mp25f == 0 ~1,
+#                      mp25f== -991~-991,
+#                      mp25f == -993~-993,
+#                      TRUE ~ 0), # trust work leadership
+#     et_4 = case_when(mp25fb == 0~1,
+#                      mp25fb == -991~-991,
+#                      mp25fb == -993~-993,
+#                      TRUE ~ 0) # trust colleagues
+#   )
 
-ds %>%
-  mutate(
-    et_1 = case_when(MP25g = 0 ~1,
-                     TRUE ~ 0), # trust government
-    et_2 = case_when(MP25ea = 0 ~1,
-                     TRUE ~ 0), # trust information
-    et_3 = case_when(MP25f = 0 ~1,
-                     TRUE ~ 0), # trust work leadership
-    et_4 = case_when(MP25fb = 0~1,
-                     TRUE ~ 0) # trust colleagues
-  )
+# relation
+# ds <- ds %>%
+#   mutate(
+#     e_rel = case_when(ra56 == 1 ~ 0,
+#                       ra56 == 2 ~ 0,
+#                       ra56 == 3 ~ 1,
+#                       ra56 == 4 ~ 1,
+#                       ra56 == 5 ~ 1,) # how did pandemic affect you
+#   )
 
-# appraisal RMT: forget about this :)
-
-ds %>%
-  mutate(
-    appraisal = case_when(RA56 = #) # how did pandemic affect you
-  )
 
 
 ```
-# cross
 
-# long
+## separating datset
 
+```{r waves}
+# dataset wave 1
+ds1 <- ds %>%
+  dplyr::filter(wave=="1") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+
+# dataset of wave two
+ds2 <- ds %>%
+  dplyr::filter(wave=="2") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+  
+# dataset of wave three
+ds3 <- ds %>%
+  dplyr::filter(wave=="3") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+
+# here I try to create a complete dataset 
+dsc <- ds %>%
+  dplyr::filter(hashed_id %in% ds1$hashed_id &
+                hashed_id %in% ds2$hashed_id &
+                hashed_id %in% ds3$hashed_id)%>%
+  group_by(hashed_id)
+
+
+ds %>%
+  filter(wave == "1") %>% 
+  select(assessment_week) %>%
+  table()
+  
+```
+
+# replace NAs
+
+```{r function,include=FALSE}
+replace_values_across_items <- function(df, item_names, value_to_replace=-9, replacement=0, print_freq_tables=TRUE) {
+  
+  results_list <- lapply(df[item_names], function(x) ifelse(x == value_to_replace, replacement, x))
+  return_df <- data.frame(matrix(unlist(results_list), ncol=length(results_list), byrow=FALSE))
+  names(return_df) <- item_names
+  
+  if(isTRUE(print_freq_tables)){
+    print(lapply(return_df, table))
+  }
+  
+  return(return_df)
+}
+
+ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = (-993), replacement = NA)
+
+ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = (-991), replacement = NA)
+ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = ("-993"), replacement = NA)
+
+ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = ("-991"), replacement = NA)
+
+# separate dataset
+
+ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = ("-993"), replacement = NA)
+
+ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = ("-991"), replacement = NA)
+ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = (-993), replacement = NA)
+
+ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = (-991), replacement = NA)
+
+# wave 2
+
+ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = ("-993"), replacement = NA)
+
+ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = ("-991"), replacement = NA)
+ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = (-993), replacement = NA)
+
+ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = (-991), replacement = NA)
+
+# wave 3
+
+ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = ("-993"), replacement = NA)
+
+ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = ("-991"), replacement = NA)
+ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = (-993), replacement = NA)
+
+ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = (-991), replacement = NA)
+
+# complete set
+
+dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = ("-993"), replacement = NA)
+
+dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = ("-991"), replacement = NA)
+dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-993), replacement = NA)
+
+dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-991), replacement = NA)
+
+```
+
+# decriptives
+
+```{r describe}
+
+# fornat akk datafranes as tibbles
+ds <- as_tibble(ds)
+
+ds[-1] <- ds[-1] %>% mutate_if(is.character, as.numeric)
+
+## wave 1
+
+ds1 <- as_tibble(ds1)
+
+ds1[-1] <- ds1[-1] %>% mutate_if(is.character, as.numeric)
+
+## wave 2
+
+ds2 <- as_tibble(ds2)
+
+ds2[-1] <- ds2[-1] %>% mutate_if(is.character, as.numeric)
+
+## wave 3
+
+ds3 <- as_tibble(ds3)
+
+ds3[-1] <- ds3[-1] %>% mutate_if(is.character, as.numeric)
+
+## complete set
+
+dsc <- as_tibble(dsc)
+
+dsc <- dsc %>%
+  group_by(hashed_id)
+
+dsc[-1] <- dsc[-1] %>% mutate_if(is.character, as.numeric)
+
+
+# some summaries
+
+e_items <- grep("ehc_|e_rel|et_|eg_|ec_", names(ds), value = TRUE)
+e_raw <- c("mp18", "mp21", "mp23", "mp18ab","mp22", "mp25", "mp25aa", "tr15", "tr16", "mp18aa", "mp25b", "mp25c", "mp25d", "mp25e", "ep32")
+
+
+ehc <- grep("ehc_", names(ds), value = TRUE)
+
+ec <- grep("ec_", names(ds), value = TRUE)
+
+e_rel <- grep("e_rel", names(ds), value = TRUE)
+et <- grep("et_", names(ds), value = TRUE)
+eg <- grep("eg_", names(ds), value = TRUE)
+
+
+knitr::kable(psych::describe(ds[e_items]))
+knitr::kable(psych::describe(ds[e_raw]))
+
+## hours worked what would be consider impossible values
+which(ds[e_raw] > 99, arr.ind = TRUE) 
+ds[2025,"tr16"]  <- NA_real_ # impossible value 7777
+# ds[2111,"tr16"]  <- NA_real_ # 211 hours worked
+
+## days in isolation, what are impossible values?
+which(ds[e_raw] > 50, arr.ind = TRUE)
+
+
+ggplot2::ggplot(data=ds,aes(x = factor(wave), 
+                                y = rowSums(ds[e_items], na.rm = TRUE)
+                                )
+                            ) + 
+ geom_violin(position=position_dodge(1), 
+             trim = FALSE
+             ) +
+  geom_boxplot(width = 0.05,
+  position = position_dodge(0.9) 
+  # color = "black"
+  )+
+  geom_smooth(method = "lm", se=TRUE
+              ) +
+  ggtitle("Healhtcare worker stressors", subtitle = "")+
+  xlab("Timepoints")+
+  ylab("E") 
+
+
+ggplot2::ggplot(data=ds,aes(x = factor(wave), 
+                                y = rowSums(ds[e_raw], na.rm = TRUE)
+                                )
+                            ) + 
+ geom_violin(position=position_dodge(1), 
+             trim = FALSE
+             ) +
+  geom_boxplot(width = 0.05,
+  position = position_dodge(0.9) 
+  # color = "black"
+  )+
+  geom_smooth(method = "lm", se=TRUE
+              ) +
+  ggtitle("Healhtcare worker stressors RAW", subtitle = "")+
+  xlab("Timepoints")+
+  ylab("E") 
+
+```
+
+
+# first plots
+
+
+```{r first look}
+
+## ehc
+ds[c(e_items, "hashed_id", "wave")] %>%
+  gather("Type", "Value",-hashed_id, -wave) %>%
+  ggplot(aes(x=as.factor(Value), group=wave))+
+  geom_bar(aes(fill=wave),position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## raw
+ds[c(e_raw, "hashed_id", "wave")] %>%
+  gather("Type", "Value",-hashed_id, -wave) %>%
+  ggplot(aes(x=as.factor(Value), group=wave))+
+  geom_bar(aes(fill=wave),position="dodge")+
+  facet_wrap(~Type,scales = "free_x")+
+  ggtitle("Count of RAW hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+## ec
+ds[c(ec, "hashed_id", "wave")] %>%
+  gather("Type", "Value",-hashed_id, -wave) %>%
+  ggplot(aes(x=as.factor(Value), group=wave))+
+  geom_bar(aes(fill=wave),position="dodge")+
+  facet_wrap(~Type,scales = "free_x")+
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+```
+# wave 1
+
+```{r wave-1}
+
+ds1$ehc <-rowSums(ds1[ehc], na.rm = TRUE)
+ds1$ec <-rowSums(ds1[ec], na.rm = TRUE)
+ds1$E <-rowSums(ds1[c(ehc, ec)], na.rm = TRUE)
+
+
+
+ghq <- grep("^ad", names(ds1), value = TRUE)
+ds1$ghq <-rowSums(ds1[ghq])
+
+psych::pairs.panels(ds1[c("ehc", "ec", "E", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "over all timepoints"
+             )
+
+
+```
+
+```{r sr_score_plot1}
+# random slopes and intercepts
+
+EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds1)  
+EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds1)  
+
+
+# compare model fits
+summary(anova(EP,EP_poly,test="Chisq"))
+
+
+# plot differ EP lines
+
+(plot <- ggplot(ds1, aes(x = scale(E), y = scale(ghq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear EP line"))
+
+intercept = summary(EP)$coefficients[1]
+E_slope = summary(EP)$coefficients[2]
+
+## predicted E wwould be predE = slope*actualE + intercept
+## calculate predicted E based on this formula
+ds1$P_pred = (intercept + ds1$E*E_slope)
+
+ds1$SR= scale(ds1$ghq - ds1$P_pred)
+ds1$RES = -(ds1$SR)
+
+
+psych::pairs.panels(ds1[c("SR", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "over all timepoints"
+             )
+
+
+```
+
+# wave 2
+
+```{r wave-2}
+
+ds2$ehc <-rowSums(ds2[ehc], na.rm = TRUE)
+
+ghqq <- grep("^ad", names(ds2), value = TRUE)
+ds2$ghq <-rowSums(ds2[ghq])
+
+psych::pairs.panels(ds2[c("ehc", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "wave 2"
+             )
+
+```
+
+# wave 3
+
+```{r wave-3}
+
+ds3$ehc <-rowSums(ds3[ehc], na.rm = TRUE)
+
+ghqq <- grep("^ad", names(ds3), value = TRUE)
+ds3$ghq <-rowSums(ds3[ghq])
+
+psych::pairs.panels(ds3[c("ehc", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "wave 3"
+             )
+
+```
+
+# complete
+
+```{r ds-complete}
+
+
+dsc$ehc <-rowSums(dsc[ehc], na.rm = TRUE)
+dsc$ec <-rowSums(dsc[ec], na.rm = TRUE)
+dsc$E <-rowSums(dsc[c(ehc, ec)], na.rm = TRUE)
+
+
+ghq <- grep("^ad", names(dsc), value = TRUE)
+dsc$ghq <-rowSums(dsc[ghq])
+
+psych::pairs.panels(dsc[c("ehc", "ec", "E", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "across all timepoints"
+             )
+
+
+```
+
+```{r sr-complete}
+
+# random slopes and intercepts
+
+EP      <- lme4::lmer(scale(ghq)~poly(scale(ehc),1, raw = TRUE)+(1+scale(ehc)|hashed_id),data=dsc, control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE))
+EP_poly <- lme4::lmer(scale(ghq)~poly(scale(ehc),2, raw = TRUE)+(1+scale(ehc)|hashed_id),data=dsc, control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE))
+
+
+# compare model fits
+summary(anova(EP,EP_poly,test="Chisq"))
+
+
+
+intercept = summary(EP)$coefficients[1]
+E_slope = summary(EP)$coefficients[2]
+
+## predicted E wwould be predE = slope*actualE + intercept
+## calculate predicted E based on this formula
+
+dsc$P_pred = (intercept + dsc$ehc*E_slope)
+
+
+dsc$SR = scale(dsc$ghq -dsc$P_pred)
+dsc$RES <- -(dsc$SR)
+
+
+psych::pairs.panels(dsc[c("RES", "ghq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "over all timepoints"
+             )
+
+
+```
 
