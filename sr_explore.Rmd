@@ -497,13 +497,14 @@ ds[c(ec, "hashed_id", "wave")] %>%
 ds1$ehc <-rowSums(ds1[ehc], na.rm = TRUE)
 ds1$ec <-rowSums(ds1[ec], na.rm = TRUE)
 ds1$E <-rowSums(ds1[c(ehc, ec)], na.rm = TRUE)
+ds1$ehc_raw <-rowSums(ds1[e_raw], na.rm = FALSE)
 
 
 
 ghq <- grep("^ad", names(ds1), value = TRUE)
 ds1$ghq <-rowSums(ds1[ghq])
 
-psych::pairs.panels(ds1[c("ehc", "ec", "E", "ghq")], 
+psych::pairs.panels(ds1[c("ehc", "ec", "E", "ehc_raw", "ghq")], 
              method = "pearson", # correlation method
              hist.col = "#00AFBB",
              density = TRUE,  # show density plots
@@ -513,6 +514,9 @@ psych::pairs.panels(ds1[c("ehc", "ec", "E", "ghq")],
 
 
 ```
+Unfortunately, the SR score and GHQ are basically the same. 
+```r scale(ds1$ghq)[1:5]``` and ```r ds1$SR[1:5]```
+
 
 ```{r sr_score_plot1}
 # random slopes and intercepts
@@ -522,36 +526,55 @@ EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds1)
 
 
 # compare model fits
-summary(anova(EP,EP_poly,test="Chisq"))
+anova(EP,EP_poly,test="Chisq")
 
 
 # plot differ EP lines
 
-(plot <- ggplot(ds1, aes(x = scale(E), y = scale(ghq))) +
+plot <- ggplot(ds1, aes(x = scale(E), y = scale(ghq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(method = "lm") +
-  ggtitle("Linear EP line"))
+  ggtitle("Linear EP line")
+
+plot <- ggplot(ds1, aes(x = scale(E), y = scale(ghq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line")
 
 intercept = summary(EP)$coefficients[1]
 E_slope = summary(EP)$coefficients[2]
 
 ## predicted E wwould be predE = slope*actualE + intercept
 ## calculate predicted E based on this formula
-ds1$P_pred = (intercept + ds1$E*E_slope)
+ds1$P_pred = (intercept + scale(ds1$E)*E_slope)
 
-ds1$SR= scale(ds1$ghq - ds1$P_pred)
+ds1$SR= scale(scale(ds1$ghq) - ds1$P_pred)
 ds1$RES = -(ds1$SR)
 
 
-psych::pairs.panels(ds1[c("SR", "ghq")], 
+# poly
+intercept_poly = summary(EP_poly)$coefficients[1]
+E_slope_poly = summary(EP_poly)$coefficients[2]
+E_slope2_poly = summary(EP_poly)$coefficients[3]
+
+## predicted E wwould be predE = slope*actualE + intercept
+## calculate predicted E based on this formula
+
+ds1$P_pred_poly = (intercept_poly + scale(ds1$E)*E_slope_poly + (scale(ds1$E)^2)*E_slope2_poly)
+
+
+ds1$SR_poly = scale(scale(ds1$ghq) -ds1$P_pred_poly)
+ds1$RES_poly <- -(ds1$SR_poly)
+
+psych::pairs.panels(ds1[c("RES", "RES_poly", "ghq")], 
              method = "pearson", # correlation method
              hist.col = "#00AFBB",
              density = TRUE,  # show density plots
              ellipses = TRUE, # show correlation ellipses
              main = "over all timepoints"
              )
-
 
 ```
 
@@ -628,22 +651,49 @@ EP_poly <- lme4::lmer(scale(ghq)~poly(scale(ehc),2, raw = TRUE)+(1+scale(ehc)|ha
 # compare model fits
 summary(anova(EP,EP_poly,test="Chisq"))
 
+(plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq)
+                        )) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear E-P line group diff"))
+
+(plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line"))
 
 
+# linear
 intercept = summary(EP)$coefficients[1]
 E_slope = summary(EP)$coefficients[2]
 
 ## predicted E wwould be predE = slope*actualE + intercept
 ## calculate predicted E based on this formula
 
-dsc$P_pred = (intercept + dsc$ehc*E_slope)
+dsc$P_pred = (intercept + scale(dsc$ehc)*E_slope)
 
 
-dsc$SR = scale(dsc$ghq -dsc$P_pred)
+dsc$SR = scale(scale(dsc$ghq) -dsc$P_pred)
 dsc$RES <- -(dsc$SR)
 
 
-psych::pairs.panels(dsc[c("RES", "ghq")], 
+# poly
+intercept_poly = summary(EP_poly)$coefficients[1]
+E_slope_poly = summary(EP_poly)$coefficients[2]
+E_slope2_poly = summary(EP_poly)$coefficients[3]
+
+## predicted E wwould be predE = slope*actualE + intercept
+## calculate predicted E based on this formula
+
+dsc$P_pred_poly = (intercept_poly + scale(dsc$E)*E_slope_poly + (scale(dsc$E)^2)*E_slope2_poly)
+
+
+dsc$SR_poly = scale((scale(dsc$ghq) -dsc$P_pred_poly))
+dsc$RES_poly <- -(dsc$SR_poly)
+
+psych::pairs.panels(dsc[c("RES", "RES_poly", "ghq")], 
              method = "pearson", # correlation method
              hist.col = "#00AFBB",
              density = TRUE,  # show density plots
