@@ -92,7 +92,7 @@ trust: again, it might be worth looking at them separately, as I am not sure we 
 
 RA56: what are the answer options?
 
-```{r stressors}
+```{r stressors, echo=TRUE}
 
 stressors <- read.csv("stressors_heroes.csv")
 
@@ -453,6 +453,8 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
 ```
 
 
+
+
 # first plots
 
 
@@ -490,6 +492,47 @@ ds[c(ec, "hashed_id", "wave")] %>%
   ylab("Count") 
 
 ```
+
+# descriptives wave one
+
+```{r deswave1}
+
+knitr::kable(psych::describe(ds1[e_items]))
+knitr::kable(psych::describe(ds1[e_raw]))
+
+
+## ehc
+ds1[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## raw
+ds1[c(e_raw, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of RAW hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+## ec
+ds1[c(ec, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+```
 # wave 1
 
 ```{r wave-1}
@@ -515,7 +558,7 @@ psych::pairs.panels(ds1[c("ehc", "ec", "E", "ehc_raw", "ghq")],
 
 ```
 Unfortunately, the SR score and GHQ are basically the same. 
-```r scale(ds1$ghq)[1:5]``` and ```r ds1$SR[1:5]```
+
 
 
 ```{r sr_score_plot1}
