@@ -353,6 +353,12 @@ dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-991)
 
 # decriptives
 
+# RMT general comment:
+# Since we are not sure about anything,
+# I suggest we focus on the first wave only.
+# That includes these descriptive tables
+# (Alternatively, I would show these values stratified by wave)
+
 ```{r describe}
 
 # fornat akk datafranes as tibbles
@@ -414,7 +420,6 @@ ds[2025,"tr16"]  <- NA_real_ # impossible value 7777
 ## days in isolation, what are impossible values?
 which(ds[e_raw] > 50, arr.ind = TRUE)
 
-
 ggplot2::ggplot(data=ds,aes(x = factor(wave), 
                                 y = rowSums(ds[e_items], na.rm = TRUE)
                                 )
@@ -430,7 +435,7 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
               ) +
   ggtitle("Healhtcare worker stressors", subtitle = "")+
   xlab("Timepoints")+
-  ylab("E") 
+  ylab("E") # RMT: this plot makes sense: more stressors during the first wave (right?)
 
 
 ggplot2::ggplot(data=ds,aes(x = factor(wave), 
@@ -455,6 +460,8 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
 
 # first plots
 
+# I found these counts a bit confusing, since sample sizes
+# vary substantially across waves
 
 ```{r first look}
 
@@ -515,7 +522,10 @@ psych::pairs.panels(ds1[c("ehc", "ec", "E", "ehc_raw", "ghq")],
 
 ```
 Unfortunately, the SR score and GHQ are basically the same. 
-```r scale(ds1$ghq)[1:5]``` and ```r ds1$SR[1:5]```
+```r scale(ds1$ghq)[1:5]``` and ```r ds1$SR[1:5]``` 
+
+#RMT: the code is somewhow not showing this properly I think
+#Maybe you should use only one comma?
 
 
 ```{r sr_score_plot1}
