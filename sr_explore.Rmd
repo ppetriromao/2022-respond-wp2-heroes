@@ -38,7 +38,7 @@ ds <- ds %>%
         
          # mp19 = recode(mp19, "4" = NA_character_),	        
         
-         mp25b = recode(mp25b, "3" = NA_character_),	        
+         mp25b = recode(mp25b, "3" = NA_character_),	# RMT: "2" = "I do not know"        
         
          # ep31 = recode(ep31, "2" = NA_character_),	        
         
@@ -56,7 +56,7 @@ ds <- ds %>%
         
          # sp66 = recode(sp66, "2" = NA_character_),	        
         
-         sp66b1 = recode(sp66b1, "6" = NA_character_),	        
+         sp66b1 = recode(sp66b1, "6" = NA_character_),	# RMT: Do you actually use these stressors?        
         
          sp66b2 = recode(sp66b2, "6" = NA_character_),	        
         
@@ -130,11 +130,11 @@ ds <- ds %>%
                       mp25c == 2 ~ 0,
                       mp25c == 3 ~ 1,
                       mp25c == 4 ~ 1,
-                      mp25c == 5 ~ 1,
+                      mp25c == 5 ~ 1, # RMT: I think there is no value = 5
                       mp25c == NA_character_~NA_real_,
                       mp25c == -991~-991,
                       mp25c == -993~-993), # stigma
-    ehc_7 = case_when(mp25d == 0 ~ 0,
+    ehc_7 = case_when(mp25d == 0 ~ 0, # RMT: this is Likert 0 to 3 so I assume this line is not needed
                       mp25d == -991~-991,
                       mp25d == -993~-993,
                       mp25d == NA_character_~NA_real_,
