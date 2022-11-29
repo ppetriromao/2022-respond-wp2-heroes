@@ -349,61 +349,27 @@ ds %>%
 # replace NAs
 
 ```{r function,include=FALSE}
-replace_values_across_items <- function(df, item_names, value_to_replace=-9, replacement=0, print_freq_tables=TRUE) {
-  
-  results_list <- lapply(df[item_names], function(x) ifelse(x == value_to_replace, replacement, x))
-  return_df <- data.frame(matrix(unlist(results_list), ncol=length(results_list), byrow=FALSE))
-  names(return_df) <- item_names
-  
-  if(isTRUE(print_freq_tables)){
-    print(lapply(return_df, table))
-  }
-  
-  return(return_df)
-}
 
-ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = (-993), replacement = NA)
 
-ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = (-991), replacement = NA)
-ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = ("-993"), replacement = NA)
+ds <- ds %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
 
-ds <- replace_values_across_items(ds, colnames(ds), value_to_replace = ("-991"), replacement = NA)
+ds1 <- ds1 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
 
-# separate dataset
+ds2 <- ds2 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
 
-ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = ("-993"), replacement = NA)
+ds3 <- ds3 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
 
-ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = ("-991"), replacement = NA)
-ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = (-993), replacement = NA)
-
-ds1 <- replace_values_across_items(ds1, colnames(ds1), value_to_replace = (-991), replacement = NA)
-
-# wave 2
-
-ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = ("-993"), replacement = NA)
-
-ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = ("-991"), replacement = NA)
-ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = (-993), replacement = NA)
-
-ds2 <- replace_values_across_items(ds2, colnames(ds2), value_to_replace = (-991), replacement = NA)
-
-# wave 3
-
-ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = ("-993"), replacement = NA)
-
-ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = ("-991"), replacement = NA)
-ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = (-993), replacement = NA)
-
-ds3 <- replace_values_across_items(ds3, colnames(ds3), value_to_replace = (-991), replacement = NA)
-
-# complete set
-
-dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = ("-993"), replacement = NA)
-
-dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = ("-991"), replacement = NA)
-dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-993), replacement = NA)
-
-dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-991), replacement = NA)
+dsc <- dsc %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
 
 ```
 
