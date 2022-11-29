@@ -353,7 +353,7 @@ ds %>%
 
 ds <- ds %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
   mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
+  mutate(across(where(is.character) & !hashed_id, .fns = ~recode(.x,  "-991" = NA_character_,"-993" = NA_character_)))
 
 ds1 <- ds1 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
   mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
@@ -382,39 +382,6 @@ That includes these descriptive tables
 (Alternatively, I would show these values stratified by wave)
 
 ```{r describe}
-
-# fornat akk datafranes as tibbles
-ds <- as_tibble(ds)
-
-ds[-1] <- ds[-1] %>% mutate_if(is.character, as.numeric)
-
-## wave 1
-
-ds1 <- as_tibble(ds1)
-
-ds1[-1] <- ds1[-1] %>% mutate_if(is.character, as.numeric)
-
-## wave 2
-
-ds2 <- as_tibble(ds2)
-
-ds2[-1] <- ds2[-1] %>% mutate_if(is.character, as.numeric)
-
-## wave 3
-
-ds3 <- as_tibble(ds3)
-
-ds3[-1] <- ds3[-1] %>% mutate_if(is.character, as.numeric)
-
-## complete set
-
-dsc <- as_tibble(dsc)
-
-dsc <- dsc %>%
-  group_by(hashed_id)
-
-dsc[-1] <- dsc[-1] %>% mutate_if(is.character, as.numeric)
-
 
 # some summaries
 
@@ -461,7 +428,7 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
 
 
 ggplot2::ggplot(data=ds,aes(x = factor(wave), 
-                                y = rowSums(ds[e_raw], na.rm = TRUE)
+                                y = psych::scoreItems(e_raw, ds[e_raw])$scores
                                 )
                             ) + 
  geom_violin(position=position_dodge(1), 
@@ -654,7 +621,7 @@ Questions:
 ds1$ehc <-rowSums(ds1[ehc], na.rm = TRUE)
 ds1$ec <-rowSums(ds1[ec], na.rm = TRUE)
 ds1$E <-rowSums(ds1[c(ehc, ec)], na.rm = TRUE)
-ds1$ehc_raw <-rowSums(ds1[e_raw], na.rm = FALSE)
+ds1$ehc_raw <-psych::scoreItems(e_raw, ds1[e_raw])$scores
 
 
 
@@ -810,7 +777,7 @@ In wave two we have the GAD7, so we can use the PHQADS as the basis of the SR sc
 ds2$ehc <-rowSums(ds2[ehc], na.rm = TRUE)
 ds2$ec <-rowSums(ds2[ec], na.rm = TRUE)
 ds2$E <-rowSums(ds2[c(ehc, ec)], na.rm = TRUE)
-ds2$ehc_raw <-rowSums(ds2[e_raw], na.rm = FALSE)
+ds2$ehc_raw <-psych::scoreItems(e_raw, ds2[e_raw])$scores
 
 
 
@@ -842,7 +809,7 @@ psych::pairs.panels(ds2[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )],
 ds3$ehc <-rowSums(ds3[ehc], na.rm = TRUE)
 ds3$ec <-rowSums(ds3[ec], na.rm = TRUE)
 ds3$E <-rowSums(ds3[c(ehc, ec)], na.rm = TRUE)
-ds3$ehc_raw <-rowSums(ds3[e_raw], na.rm = FALSE)
+ds3$ehc_raw <-psych::scoreItems(e_raw, ds3[e_raw])$scores
 
 
 
