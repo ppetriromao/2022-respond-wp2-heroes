@@ -74,7 +74,205 @@ ds <- ds %>%
 
 ```
 
-# defining and mutating stressors
+# separating datset
+
+```{r waves}
+# dataset wave 1
+ds1 <- ds %>%
+  dplyr::filter(wave=="1") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+
+ds1 <- 
+  ds1 %>% 
+  mutate(
+   # mp25a = fct_recode(mp25a,
+   #                    NULL = "2"),
+    mp25b = fct_recode(mp25b,
+                       NULL = "2",
+                       NULL = "3"),
+    mp25d = fct_recode(mp25d,
+                       NULL = "4"), # Option 4 added in waves 2 and 3
+    ep32 = fct_recode(ep32,
+                      NULL = "2",
+                      NULL = "3"),
+    mp24 = as.numeric(mp24),
+    mp18 = fct_recode(mp18,
+                      NULL = "2"),
+    
+    )
+
+# dataset of wave two
+ds2 <- ds %>%
+  dplyr::filter(wave=="2") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+  
+# dataset of wave three
+ds3 <- ds %>%
+  dplyr::filter(wave=="3") %>%
+  dplyr::filter(assessment_week !=-993)%>%
+  group_by(hashed_id)
+
+# here I try to create a complete dataset 
+dsc <- ds %>%
+  dplyr::filter(hashed_id %in% ds1$hashed_id &
+                hashed_id %in% ds2$hashed_id &
+                hashed_id %in% ds3$hashed_id)%>%
+  group_by(hashed_id)
+
+
+ds %>%
+  filter(wave == "1") %>% 
+  select(assessment_week) %>%
+  table()
+  
+```
+
+# replace NAs
+
+```{r function,include=FALSE}
+
+
+ds <- ds %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character) & !hashed_id, .fns = ~recode(.x,  "-991" = NA_character_,"-993" = NA_character_)))
+
+ds1 <- ds1 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
+
+ds2 <- ds2 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
+
+ds3 <- ds3 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
+
+dsc <- dsc %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
+  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
+  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
+
+```
+
+# Rober's proofs
+
+I will now focus on the first wave and include only the variables I'm interested in
+
+```{r roberds}
+
+df <- ds
+df1 <- 
+  df %>% 
+  filter(wave == 1,
+           !is.na(assessment_week)) %>%  # This removes "fake" missing data
+  select(hashed_id,
+         tr15,
+         tr16,
+         tr17,
+        # mp25a,
+         mp25b:mp25e,
+         ep32,
+         mp18,
+         mp21,
+         mp23,
+         mp22,
+         mp25,
+         mp24,
+         starts_with(c("phq", "ad"))) 
+```
+
+At this stage, I only recode NAs, so that we can look at the actual distribution of stressors
+
+```{r robermutate}
+df1 <- 
+  df1 %>% 
+  mutate(
+   # mp25a = fct_recode(mp25a,
+   #                    NULL = "2"),
+    mp25b = fct_recode(mp25b,
+                       NULL = "2",
+                       NULL = "3"),
+    mp25d = fct_recode(mp25d,
+                       NULL = "4"), # Option 4 added in waves 2 and 3
+    ep32 = fct_recode(ep32,
+                      NULL = "2",
+                      NULL = "3"),
+    mp24 = as.numeric(mp24),
+    mp18 = fct_recode(mp18,
+                      NULL = "2"),
+    
+    )
+
+df1 <- 
+  df1 %>% 
+  mutate(
+    ghq_total = select(., c(ad34:ad45)) %>% rowSums(),
+    phq_total = select(., c(phq68:phq76)) %>% rowSums()
+  )
+```
+
+## Correlation matrix
+
+```{r robercorr}
+df1 %>% 
+  mutate(
+    across(
+      where(is.factor),
+      as.character
+    ),
+    across(
+      where(is.character),
+      as.numeric
+    )
+  ) %>% 
+  select(!c(hashed_id,
+            phq68:ad45)
+  ) %>% 
+  psych::cor.plot(.)
+```
+
+Linear models
+
+```{r robertlinear}
+# GHQ12
+
+df1 %>% 
+  select(!c(hashed_id,
+            phq68:ad45)) %>% 
+  mutate(
+    across(
+      c(tr16, tr17, mp25c, mp25d, mp25e, mp21, mp23, mp22),
+      as.character
+    ),
+    across(
+      where(is.character),
+      as.numeric
+    )
+  ) %>% 
+  map(~ lm(ghq_total ~ .x, df1) %>% summary())
+
+# PHQ-9
+
+df1 %>% 
+  select(!c(hashed_id,
+            phq68:ad45)) %>% 
+  mutate(
+    across(
+      c(tr16, tr17, mp25c, mp25d, mp25e, mp21, mp23, mp22),
+      as.character
+    ),
+    across(
+      where(is.character),
+      as.numeric
+    )
+  ) %>% 
+  map(~ lm(ghq_total ~ .x, df1) %>% summary())
+```
+
+
+# Stressors
 
 TR16: days worked, should more than 5 days be a stressor? *RMT Probably 6-7 days a week should be a stressor: many HCWs did not rest for weeks*.
 TR17: hours worked on those days == should that be a stressors *RMT Hard to interpret: 16- or 24-hour shift are common among HCWs in Spain*
@@ -310,68 +508,6 @@ ds <- ds %>%
 
 ```
 
-## separating datset
-
-```{r waves}
-# dataset wave 1
-ds1 <- ds %>%
-  dplyr::filter(wave=="1") %>%
-  dplyr::filter(assessment_week !=-993)%>%
-  group_by(hashed_id)
-
-# dataset of wave two
-ds2 <- ds %>%
-  dplyr::filter(wave=="2") %>%
-  dplyr::filter(assessment_week !=-993)%>%
-  group_by(hashed_id)
-  
-# dataset of wave three
-ds3 <- ds %>%
-  dplyr::filter(wave=="3") %>%
-  dplyr::filter(assessment_week !=-993)%>%
-  group_by(hashed_id)
-
-# here I try to create a complete dataset 
-dsc <- ds %>%
-  dplyr::filter(hashed_id %in% ds1$hashed_id &
-                hashed_id %in% ds2$hashed_id &
-                hashed_id %in% ds3$hashed_id)%>%
-  group_by(hashed_id)
-
-
-ds %>%
-  filter(wave == "1") %>% 
-  select(assessment_week) %>%
-  table()
-  
-```
-
-# replace NAs
-
-```{r function,include=FALSE}
-
-
-ds <- ds %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
-  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character) & !hashed_id, .fns = ~recode(.x,  "-991" = NA_character_,"-993" = NA_character_)))
-
-ds1 <- ds1 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
-  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
-
-ds2 <- ds2 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
-  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
-
-ds3 <- ds3 %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
-  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
-
-dsc <- dsc %>% mutate(across(where(is.factor), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_))) %>% 
-  mutate(across(where(is.numeric), .fns = ~recode(.x, `-993`= NA_real_, `-991`= NA_real_,))) %>% 
-  mutate(across(where(is.character), .fns = ~recode(.x, "-993" = NA_character_, "-991" = NA_character_)))
-
-```
 
 # decriptives
 
