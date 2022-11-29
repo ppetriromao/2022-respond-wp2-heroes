@@ -116,7 +116,7 @@ the recoding of stressors are based on the following variables
     - TR15: Assigned to new team in past 3 months. Expected answer format: 0 1. Actual answers: 2 3. Basis for ehc_1
     - TR16: Days worked past week. Expected answer format: free. Actual: free. Basis for ehc_2 & ehc_3. 
     - TR17: Hour worked. Expected answer format: free. Actual: free. Basis for ehc_3. 
-    - MP18aa: Working in a COVID unit. Expected answer format: 0 1. Actual answer format: 1. Basis for: ehc_4
+    - MP18aa: Working in a COVID unit. Expected answer format: 0 1. Actual answer format: 1. Basis for: ehc_4 RMT: NOT IN WAVE 1
     - mp25b: death of a patient. Expected answer format:0 1. Actual answers. 2 3 4. Basis for: ehc_5
     - MP25c: stigma. Expected answer format: Likert 1 2 3 4. Actual answers 2 3 4 5. Basis for: ehc_6
     - MP25d: conflict at work. Expected answer format: Likert 0 1 2 3 4 5. Actual: 2 3 4 5. Basis for: ehc_7
@@ -129,10 +129,10 @@ the recoding of stressors are based on the following variables
     - MP18: close contact. Expected answer format: 0 1 2. Actual: 2 3 4. Basis for: ec_1
     - MP21: worried about getting covid. Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_2
     - MP23: worried about infecting someone.Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_3
-    - MP18ab: infection. Expected answer format: 0 1 2. Actual 1. Basis for ec_4
+    - MP18ab: infection. Expected answer format: 0 1 2. Actual 1. Basis for ec_4 RMT: NOT IN WAVE 1
     - MP22: days isolation. Expected answer format: free. Actual: free. Basis for: ec_5
     - MP25: death close one. Expected answer format: 0 1. Actual: 2 3. Basis for: ec_5
-    - MP25aa: death at work. Expected answer format: 0 1. Actual: 1. Basis for: ec_6
+    - MP25aa: death at work. Expected answer format: 0 1. Actual: 1. Basis for: ec_6 RMT: NOT IN WAVE 1
     
 
 ### To potentially add: 
