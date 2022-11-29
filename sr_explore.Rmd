@@ -92,6 +92,24 @@ trust: again, it might be worth looking at them separately, as I am not sure we 
 
 RA56: what are the answer options?
 
+
+## notes 29/11 PPR
+
+
+
+ehc_4: in wave one, everyone should be one, not sure what happened. >> answer options appear to change for MP18aa in wave 2 and 3, please check. 
+
+ehc_5: the answer options for MP25b don't appear to correspond with codebook. more options than 1 and 0
+
+ehc7: double check answer options and recoding PPR
+
+ehc8: something is amiss, as based on raw data we would expect over 500 1s. 
+
+ehc9: answer options in codebook are less than actual answer options >> doublecheck ep32
+
+ec_3: MP18ab>> answer options seem to change in wave 2 and 3 
+
+
 ```{r stressors, echo=TRUE}
 
 stressors <- read.csv("stressors_heroes.csv")
@@ -117,7 +135,7 @@ ds <- ds %>%
                       tr16 == NA_character_~NA_real_,
                       TRUE ~ 1), #  hours worked on those days
     ehc_4 = case_when(mp18aa == 1~1,
-                      mp18aa == 0 ~1,
+                      mp18aa == 0 ~0,
                       mp18aa == -991~-991,
                       mp18aa == NA_character_~NA_real_,
                       mp18aa == -993~-993), # covid-19 unit RMT: strata?
@@ -353,11 +371,11 @@ dsc <- replace_values_across_items(dsc, colnames(dsc), value_to_replace = (-991)
 
 # decriptives
 
-# RMT general comment:
-# Since we are not sure about anything,
-# I suggest we focus on the first wave only.
-# That includes these descriptive tables
-# (Alternatively, I would show these values stratified by wave)
+RMT general comment:
+Since we are not sure about anything,
+I suggest we focus on the first wave only.
+That includes these descriptive tables
+(Alternatively, I would show these values stratified by wave)
 
 ```{r describe}
 
@@ -500,10 +518,10 @@ ds[c(ec, "hashed_id", "wave")] %>%
 
 ```
 
-# descriptives wave one
+# descriptives by wave
 
 ```{r deswave1}
-
+# wave 1 --------------------------------------
 knitr::kable(psych::describe(ds1[e_items]))
 knitr::kable(psych::describe(ds1[e_raw]))
 
@@ -531,6 +549,79 @@ ds1[c(e_raw, "hashed_id")] %>%
 
 ## ec
 ds1[c(ec, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+# wave 2 --------------------------------------
+knitr::kable(psych::describe(ds2[e_items]))
+knitr::kable(psych::describe(ds2[e_raw]))
+
+
+## ehc
+ds2[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## raw
+ds2[c(e_raw, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of RAW hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+## ec
+ds2[c(ec, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+# wave 3 --------------------------------------
+knitr::kable(psych::describe(ds3[e_items]))
+knitr::kable(psych::describe(ds3[e_raw]))
+
+
+## ehc
+ds3[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## raw
+ds3[c(e_raw, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of RAW hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+## ec
+ds3[c(ec, "hashed_id")] %>%
   gather("Type", "Value",-hashed_id) %>%
   ggplot(aes(x=as.factor(Value)))+
   geom_bar(position="dodge")+
