@@ -95,8 +95,6 @@ RA56: what are the answer options?
 
 ## notes 29/11 PPR
 
-
-
 ehc_4: in wave one, everyone should be one, not sure what happened. >> answer options appear to change for MP18aa in wave 2 and 3, please check. 
 
 ehc_5: the answer options for MP25b don't appear to correspond with codebook. more options than 1 and 0
@@ -108,7 +106,51 @@ ehc8: something is amiss, as based on raw data we would expect over 500 1s.
 ehc9: answer options in codebook are less than actual answer options >> doublecheck ep32
 
 ec_3: MP18ab>> answer options seem to change in wave 2 and 3 
+## explanation of recoding
+the recoding of stressors are based on the following variables
 
+**expected answer format especially interesting considering recoding in previous chunk**
+
+### EHC stressors
+
+    - TR15: Assigned to new team in past 3 months. Expected answer format: 0 1. Actual answers: 2 3. Basis for ehc_1
+    - TR16: Days worked past week. Expected answer format: free. Actual: free. Basis for ehc_2 & ehc_3. 
+    - TR17: Hour worked. Expected answer format: free. Actual: free. Basis for ehc_3. 
+    - MP18aa: Working in a COVID unit. Expected answer format: 0 1. Actual answer format: 1. Basis for: ehc_4
+    - mp25b: death of a patient. Expected answer format:0 1. Actual answers. 2 3 4. Basis for: ehc_5
+    - MP25c: stigma. Expected answer format: Likert 1 2 3 4. Actual answers 2 3 4 5. Basis for: ehc_6
+    - MP25d: conflict at work. Expected answer format: Likert 0 1 2 3 4 5. Actual: 2 3 4 5. Basis for: ehc_7
+    - MP25e: Violence at work. Expected answer format: Likert 1 2 3 4. Actual: 2 3 4 5. Basis for: ehc_8
+    - EP32: Need to prioritise covid patients. Expected answer format: 0 1 2(N/A) Actual: 2 3 .Basis for: ehc_9
+
+
+### EC stressors
+
+    - MP18: close contact. Expected answer format: 0 1 2. Actual: 2 3 4. Basis for: ec_1
+    - MP21: worried about getting covid. Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_2
+    - MP23: worried about infecting someone.Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_3
+    - MP18ab: infection. Expected answer format: 0 1 2. Actual 1. Basis for ec_4
+    - MP22: days isolation. Expected answer format: free. Actual: free. Basis for: ec_5
+    - MP25: death close one. Expected answer format: 0 1. Actual: 2 3. Basis for: ec_5
+    - MP25aa: death at work. Expected answer format: 0 1. Actual: 1. Basis for: ec_6
+    
+
+### To potentially add: 
+
+MP24: loved one had covid
+
+### Considered but discarded
+
+    - EP27a: received training >> strata
+    - SD08: live with child. >> regular life, not necessarily a stressor. 
+    - SD09: living with elderly >> not a stressor
+    - SD10: living with people with disability >> not a stressor
+    - MP25g: trust in government >> too subjective, not a stressor
+    - MP25e: trust information >> too subjective, not a stressor
+    - MP25f: perceived management by leaders
+    - MP25fb: perceived management by colleagues
+    - R52a-d etc: different types of support received. >> Receiving support could alleviate a stressor or could mark the presence of stress, but we cannot distinguish that. 
+    
 
 ```{r stressors, echo=TRUE}
 
@@ -171,10 +213,6 @@ ds <- ds %>%
                       ep32 == -993~-993,
                       ep32== NA_character_~NA_real_,
                       TRUE ~ 0) # need to prioritise patients
-    # ehc_10 = case_when(EP27a == 1 ~ 1,
-    #                    EP27b == 1 ~ 0,
-    #                    EP27c == 1 ~ 0,
-    #                    EP27d == 1 ~ 0) # received training or not RMT: strata?
     )
 
 # general stressors
