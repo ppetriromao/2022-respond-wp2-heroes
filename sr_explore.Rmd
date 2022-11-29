@@ -272,7 +272,7 @@ df1 %>%
 ```
 
 
-# Stressors
+# Stressors (BROKEN)
 
 TR16: days worked, should more than 5 days be a stressor? *RMT Probably 6-7 days a week should be a stressor: many HCWs did not rest for weeks*.
 TR17: hours worked on those days == should that be a stressors *RMT Hard to interpret: 16- or 24-hour shift are common among HCWs in Spain*
