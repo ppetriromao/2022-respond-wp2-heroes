@@ -83,11 +83,13 @@ ds1 <- ds %>%
   dplyr::filter(assessment_week !=-993)%>%
   group_by(hashed_id)
 
+
+## robertos recoding, at this point only wave one FIX for other waves 
 ds1 <- 
   ds1 %>% 
   mutate(
-   # mp25a = fct_recode(mp25a,
-   #                    NULL = "2"),
+   mp25a = fct_recode(mp25a,
+                      NULL = "2"),
     mp25b = fct_recode(mp25b,
                        NULL = "2",
                        NULL = "3"),
@@ -96,12 +98,12 @@ ds1 <-
     ep32 = fct_recode(ep32,
                       NULL = "2",
                       NULL = "3"),
-    mp24 = as.numeric(mp24),
+    # mp24 = as.numeric(mp24),
     mp18 = fct_recode(mp18,
                       NULL = "2"),
-    
+       mp19 = fct_recode(mp19,
+                      NULL = "4")# added by papoula
     )
-
 # dataset of wave two
 ds2 <- ds %>%
   dplyr::filter(wave=="2") %>%
@@ -171,10 +173,11 @@ df1 <-
          tr15,
          tr16,
          tr17,
-        # mp25a,
+         mp25a,
          mp25b:mp25e,
          ep32,
          mp18,
+         mp19,
          mp21,
          mp23,
          mp22,
@@ -189,8 +192,8 @@ At this stage, I only recode NAs, so that we can look at the actual distribution
 df1 <- 
   df1 %>% 
   mutate(
-   # mp25a = fct_recode(mp25a,
-   #                    NULL = "2"),
+   mp25a = fct_recode(mp25a,
+                      NULL = "2"),
     mp25b = fct_recode(mp25b,
                        NULL = "2",
                        NULL = "3"),
@@ -199,11 +202,12 @@ df1 <-
     ep32 = fct_recode(ep32,
                       NULL = "2",
                       NULL = "3"),
-    mp24 = as.numeric(mp24),
+    # mp24 = as.numeric(mp24),
     mp18 = fct_recode(mp18,
                       NULL = "2"),
-    
-    )
+       mp19 = fct_recode(mp19,
+                      NULL = "4")# added by papoula
+   )
 
 df1 <- 
   df1 %>% 
@@ -269,10 +273,12 @@ df1 %>%
     )
   ) %>% 
   map(~ lm(ghq_total ~ .x, df1) %>% summary())
+
+
 ```
 
 
-# Stressors (BROKEN)
+# Stressors 
 
 TR16: days worked, should more than 5 days be a stressor? *RMT Probably 6-7 days a week should be a stressor: many HCWs did not rest for weeks*.
 TR17: hours worked on those days == should that be a stressors *RMT Hard to interpret: 16- or 24-hour shift are common among HCWs in Spain*
@@ -291,7 +297,7 @@ trust: again, it might be worth looking at them separately, as I am not sure we 
 RA56: what are the answer options?
 
 
-## notes 29/11 PPR
+ _FIXED notes 29/11 PPR_
 
 ehc_4: in wave one, everyone should be one, not sure what happened. >> answer options appear to change for MP18aa in wave 2 and 3, please check. 
 
@@ -304,40 +310,40 @@ ehc8: something is amiss, as based on raw data we would expect over 500 1s.
 ehc9: answer options in codebook are less than actual answer options >> doublecheck ep32
 
 ec_3: MP18ab>> answer options seem to change in wave 2 and 3 
+
 ## explanation of recoding
 the recoding of stressors are based on the following variables
 
-**expected answer format especially interesting considering recoding in previous chunk**
 
-### EHC stressors
+*EHC stressors*
 
-    - TR15: Assigned to new team in past 3 months. Expected answer format: 0 1. Actual answers: 2 3. Basis for ehc_1
-    - TR16: Days worked past week. Expected answer format: free. Actual: free. Basis for ehc_2 & ehc_3. 
-    - TR17: Hour worked. Expected answer format: free. Actual: free. Basis for ehc_3. 
-    - MP18aa: Working in a COVID unit. Expected answer format: 0 1. Actual answer format: 1. Basis for: ehc_4 RMT: NOT IN WAVE 1
-    - mp25b: death of a patient. Expected answer format:0 1. Actual answers. 2 3 4. Basis for: ehc_5
-    - MP25c: stigma. Expected answer format: Likert 1 2 3 4. Actual answers 2 3 4 5. Basis for: ehc_6
-    - MP25d: conflict at work. Expected answer format: Likert 0 1 2 3 4 5. Actual: 2 3 4 5. Basis for: ehc_7
-    - MP25e: Violence at work. Expected answer format: Likert 1 2 3 4. Actual: 2 3 4 5. Basis for: ehc_8
-    - EP32: Need to prioritise covid patients. Expected answer format: 0 1 2(N/A) Actual: 2 3 .Basis for: ehc_9
+    - TR15: Assigned to new team in past 3 months. Expected answer format: 0 1.  Basis for ehc_1
+    - TR16: Days worked past week. Expected answer format: free.Basis for ehc_2 & ehc_3. 
+    - TR17: Hour worked. Expected answer format: free. Basis for ehc_3. 
+    - MP18aa: Working in a COVID unit. Expected answer format: 0 1. Basis for: ehc_4 RMT: NOT IN WAVE 1
+    - mp25b: death of a patient. Expected answer format:0 1.  Basis for: ehc_5
+    - MP25c: stigma. Expected answer format: Likert 1 2 3 4.  Basis for: ehc_6
+    - MP25d: conflict at work. Expected answer format: Likert 0 1 2 3 4 5.Basis for: ehc_7
+    - MP25e: Violence at work. Expected answer format: Likert 1 2 3 4. Basis for: ehc_8
+    - EP32: Need to prioritise covid patients. Expected answer format: 0 1 2(N/A) Basis for: ehc_9
 
 
-### EC stressors
+*EC stressors*
 
-    - MP18: close contact. Expected answer format: 0 1 2. Actual: 2 3 4. Basis for: ec_1
-    - MP21: worried about getting covid. Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_2
-    - MP23: worried about infecting someone.Expected answer format: Likert 0 1 2 3. Actual: 2 3 4 5. Basis for: ec_3
-    - MP18ab: infection. Expected answer format: 0 1 2. Actual 1. Basis for ec_4 RMT: NOT IN WAVE 1
-    - MP22: days isolation. Expected answer format: free. Actual: free. Basis for: ec_5
-    - MP25: death close one. Expected answer format: 0 1. Actual: 2 3. Basis for: ec_5
-    - MP25aa: death at work. Expected answer format: 0 1. Actual: 1. Basis for: ec_6 RMT: NOT IN WAVE 1
+    - MP18: close contact. Expected answer format: 0 1 2.  Basis for: ec_1
+    - MP21: worried about getting covid. Expected answer format: Likert 0 1 2 3. Basis for: ec_2
+    - MP23: worried about infecting someone.Expected answer format: Likert 0 1 2 3.  Basis for: ec_3
+    - MP18ab: infection. Expected answer format: 0 1 2. Basis for ec_4 RMT: NOT IN WAVE 1
+    - MP22: days isolation. Expected answer format: free. Basis for: ec_5
+    - MP25: death close one. Expected answer format: 0 1.  Basis for: ec_5
+    - MP25aa: death at work. Expected answer format: 0 1.  Basis for: ec_6 RMT: NOT IN WAVE 1
     
 
-### To potentially add: 
+*To potentially add:*
 
 MP24: loved one had covid
 
-### Considered but discarded
+*Considered but discarded*
 
     - EP27a: received training >> strata
     - SD08: live with child. >> regular life, not necessarily a stressor. 
@@ -354,158 +360,107 @@ MP24: loved one had covid
 
 stressors <- read.csv("stressors_heroes.csv")
 
-
-# healthcare worker specific stressors
+# entire ds -----------------------------------------------------------------------------------
+## healthcare worker specific stressors
 
 ds <- ds %>%
   mutate(
     ehc_1 = case_when(tr15 == 1 ~ 1,
-                      tr15 == -991~-991,
-                      tr15 == -993~-993,
-                      tr15 == NA_character_~NA_real_,
                    tr15 == 0 ~ 0), # Assigned to new team in past 3 months
     ehc_2 = case_when(tr16 >= 6 ~ 1,
-                      tr16 == -991~-991,
-                      tr16 == -993~-993,
-                      tr16 == NA_character_~NA_real_,
-                      TRUE ~ 1), # days worked past week
-    ehc_3 = case_when((tr16 > 5 & tr17 >= 12)~ 1,
-                      tr16 == -991~-991,
-                      tr16 == -993~-993,
-                      tr16 == NA_character_~NA_real_,
-                      TRUE ~ 1), #  hours worked on those days
+                      TRUE ~ 0), # days worked past week
+    ehc_3 = case_when(tr16 > 5 & tr17 >= 12~ 1,
+                      TRUE ~ 0), #  hours worked on those days
     ehc_4 = case_when(mp18aa == 1~1,
-                      mp18aa == 0 ~0,
-                      mp18aa == -991~-991,
-                      mp18aa == NA_character_~NA_real_,
-                      mp18aa == -993~-993), # covid-19 unit RMT: strata?
+                      mp18aa == 0 ~0), # covid-19 unit RMT: strata?
     ehc_5 = case_when(mp25b == 1 ~1,
-                      mp25b == 0 ~ 0,
-                      mp25b == -991~-991,
-                      mp25b == NA_character_~NA_real_,
-                      mp25b == -993~-993), # death of patient
+                      mp25b == 0 ~ 0), # death of patient
     ehc_6 = case_when(mp25c == 1 ~ 0,
                       mp25c == 2 ~ 0,
                       mp25c == 3 ~ 1,
-                      mp25c == 4 ~ 1,
-                      mp25c == 5 ~ 1, # RMT: I think there is no value = 5
-                      mp25c == NA_character_~NA_real_,
-                      mp25c == -991~-991,
-                      mp25c == -993~-993), # stigma
+                      mp25c == 4 ~ 1), # stigma
     ehc_7 = case_when(mp25d == 0 ~ 0, # RMT: this is Likert 0 to 3 so I assume this line is not needed
-                      mp25d == -991~-991,
-                      mp25d == -993~-993,
-                      mp25d == NA_character_~NA_real_,
-                      TRUE ~ 1), # conflicts at work RMT: strata?
+                      mp25d == 1 ~ 1,
+                      mp25d == 2 ~ 2,
+                      mp25d == 3 ~ 2), # conflicts at work RMT: strata?
     ehc_8 = case_when(mp25e == 1 ~ 0,
                       mp25e == 2 ~ 0,
                       mp25e == 3 ~ 1,
-                      mp25e == 4 ~ 1,
-                      mp25e == 5 ~ 1,
-                      mp25e == NA_character_~NA_real_,
-                      mp25e == -991~-991,
-                      mp25e == -993~-993), # violence due to health worker
-    ehc_9 = case_when(ep32 == 1 ~1,
-                      ep32 == 0 ~ 0,
-                      ep32 == -991~-991,
-                      ep32 == -993~-993,
-                      ep32== NA_character_~NA_real_,
-                      TRUE ~ 0) # need to prioritise patients
-    )
+                      mp25e == 4 ~ 1), # violence due to health worker
+    ehc_9 = ep32) # need to prioritise patients
 
-# general stressors
 
-## so here I wasn't sure whether the issue you described with psychol support means that the same variable was assessed under different names, if so I would suggest an alternative below
-
-## RMT: remove support in general; keep social support at work as strata
-
-# ds <- ds %>%
-#   mutate(
-#     eg_1 = case_when(sd08 == 1 ~1,
-#                      TRUE ~ 0), # living with children
-#     eg_2 = case_when(sd09 == 1 ~1,
-#                      TRUE ~ 0), # living with elderly
-#     eg_3 = case_when(sd10 == 1 ~ 1,
-#                      TRUE ~ 0)) # living with someone who has disability
-  
-
-# covid stressors
+## covid stressors
 ds <- ds %>%
   mutate(
-    ec_1 = case_when(mp18 == 1 ~1,
-                     mp18 == -991~-991,
-                     mp18 == -993~-993,
-                     mp18 == NA_character_~NA_real_,
-                     TRUE ~ 0), # close contact
-    ec_2 = case_when(mp21 == 1 ~1,
+    ec_1 = mp18, # close contact
+    ec_2 = case_when(mp21 == 0 ~0,
+                     mp21 == 1 ~1,
                      mp21 == 2 ~1,
-                     mp21 == 3 ~1,
-                     mp21 == -991~-991,
-                     mp21 == -993~-993,
-                     mp21 == NA_character_~NA_real_,
-                     TRUE ~ 0), # worried about getting infected
-    ec_2 = case_when(mp23 == 1 ~1,
+                     mp21 == 3 ~1), # worried about getting infected
+    ec_3 = case_when(mp23 == 0 ~0,
+                     mp23 == 1 ~1,
                      mp23 == 2 ~1,
-                     mp23 == 3 ~1,
-                     mp23 == -991~-991,
-                     mp23 == -993~-993,
-                     mp23 == NA_character_~NA_real_,
-                     TRUE ~ 0), # worried about infecting someone
-    ec_3 = case_when(mp18ab == 1 ~1,
-                     mp18ab == -991~-991,
-                     mp18ab == -993~-993,
-                     mp18ab== NA_character_~NA_real_,
-                     TRUE ~ 0), # infected with COVID
-    ec_4 = case_when(mp22 >=1 ~1,
-                     mp22 == -991~-991,
-                     mp22 == -993~-993,
-                     mp22 == NA_character_~NA_real_,
-                     TRUE ~ 0), # days in isolation
-    ec_5 = case_when(mp25 == 1 ~ 1,
-                     mp25 == -991~-991,
-                     mp25 == -993~-993,
-                     mp25 == NA_character_~NA_real_,
-                     TRUE ~ 0), # death duie to covid
-    ec_6 = case_when(mp25aa == 1 ~ 1,
-                     mp25aa == -991~-991,
-                     mp25aa == -993~-993,
-                     TRUE ~ 0) # death at work
+                     mp23 == 3 ~1), # worried about infecting someone
+    ec_4 = case_when(mp18ab == 0 ~0,
+                     mp18ab == 1 ~1), # infected with COVID
+    ec_5 = case_when(mp22 >=1 ~1
+                     ), # days in isolation
+    ec_6 = mp25, # death duie to covid
+    ec_7 = mp25aa # death at work
       )
 
-# trust stressors RMT: too subjective for strata and probably too non-individual for stressors but think about it
-# 
-# ds <- ds %>%
-#   mutate(
-#     et_1 = case_when(mp25g == 0 ~1,
-#                      mp25g == -991~-991,
-#                      mp25g == -993~-993,
-#                      TRUE ~ 0), # trust government
-#     et_2 = case_when(mp25ea == 0 ~1,
-#                      mp25ea == -991~-991,
-#                      mp25ea == -993~-993,
-#                      TRUE ~ 0), # trust information
-#     et_3 = case_when(mp25f == 0 ~1,
-#                      mp25f== -991~-991,
-#                      mp25f == -993~-993,
-#                      TRUE ~ 0), # trust work leadership
-#     et_4 = case_when(mp25fb == 0~1,
-#                      mp25fb == -991~-991,
-#                      mp25fb == -993~-993,
-#                      TRUE ~ 0) # trust colleagues
-#   )
+# ds1 --------------------------------------
 
-# relation
-# ds <- ds %>%
-#   mutate(
-#     e_rel = case_when(ra56 == 1 ~ 0,
-#                       ra56 == 2 ~ 0,
-#                       ra56 == 3 ~ 1,
-#                       ra56 == 4 ~ 1,
-#                       ra56 == 5 ~ 1,) # how did pandemic affect you
-#   )
+## healthcare worker specific stressors
+
+ds1 <- ds1 %>%
+  mutate(
+    ehc_1 = case_when(tr15 == 1 ~ 1,
+                   tr15 == 0 ~ 0), # Assigned to new team in past 3 months
+    ehc_2 = case_when(tr16 >= 6 ~ 1,
+                      TRUE ~ 0), # days worked past week
+    ehc_3 = case_when((tr16 > 5 & tr17 >= 12)~ 1,
+                      TRUE ~ 0), #  hours worked on those days
+    ehc_5 = case_when(mp25b == 1 ~1,
+                      mp25b == 0 ~ 0), # death of patient
+    ehc_6 = case_when(mp25c == 1 ~ 0,
+                      mp25c == 2 ~ 0,
+                      mp25c == 3 ~ 1,
+                      mp25c == 4 ~ 1), # stigma
+    ehc_7 = case_when(mp25d == 0 ~ 0, # RMT: this is Likert 0 to 3 so I assume this line is not needed
+                      mp25d == 1 ~ 1,
+                      mp25d == 2 ~ 2,
+                      mp25d == 3 ~ 2), # conflicts at work RMT: strata?
+    ehc_8 = case_when(mp25e == 1 ~ 0,
+                      mp25e == 2 ~ 0,
+                      mp25e == 3 ~ 1,
+                      mp25e == 4 ~ 1), # violence due to health worker
+    ehc_9 = ep32,
+    ehc_10 = case_when(mp19 == 3~ 0,
+                       mp19 == 2~ 1,
+                       mp19 == 1~ 1,
+                       mp19 == 0~ 1,)) # need to prioritise patients
 
 
-
+## covid stressors
+ds1 <- ds1 %>%
+  mutate(
+    ec_1 = mp18, # close contact
+    ec_2 = case_when(mp21 == 0 ~0,
+                     mp21 == 1 ~1,
+                     mp21 == 2 ~1,
+                     mp21 == 3 ~1), # worried about getting infected
+    ec_3 = case_when(mp23 == 0 ~0,
+                     mp23 == 1 ~1,
+                     mp23 == 2 ~1,
+                     mp23 == 3 ~1), # worried about infecting someone
+    ec_5 = case_when(mp22 >=1 ~1
+                     ), # days in isolation
+    ec_6 = mp25, # death duie to covid
+    ec_8 = mp25a,
+    ec_9 = mp24
+      )
 ```
 
 
@@ -546,7 +501,7 @@ ds[2025,"tr16"]  <- NA_real_ # impossible value 7777
 which(ds[e_raw] > 50, arr.ind = TRUE)
 
 ggplot2::ggplot(data=ds,aes(x = factor(wave), 
-                                y = rowSums(ds[e_items], na.rm = TRUE)
+                                y = psych::scoreItems(e_items, ds[e_items])$scores
                                 )
                             ) + 
  geom_violin(position=position_dodge(1), 
@@ -563,72 +518,28 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
   ylab("E") # RMT: this plot makes sense: more stressors during the first wave (right?)
 
 
-ggplot2::ggplot(data=ds,aes(x = factor(wave), 
-                                y = psych::scoreItems(e_raw, ds[e_raw])$scores
-                                )
-                            ) + 
- geom_violin(position=position_dodge(1), 
-             trim = FALSE
-             ) +
-  geom_boxplot(width = 0.05,
-  position = position_dodge(0.9) 
-  # color = "black"
-  )+
-  geom_smooth(method = "lm", se=TRUE
-              ) +
-  ggtitle("Healhtcare worker stressors RAW", subtitle = "")+
-  xlab("Timepoints")+
-  ylab("E") 
 
 ```
 
 
 
-
-# first plots
-
-# I found these counts a bit confusing, since sample sizes
-# vary substantially across waves
-
-```{r first look}
-
-## ehc
-ds[c(e_items, "hashed_id", "wave")] %>%
-  gather("Type", "Value",-hashed_id, -wave) %>%
-  ggplot(aes(x=as.factor(Value), group=wave))+
-  geom_bar(aes(fill=wave),position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-## raw
-ds[c(e_raw, "hashed_id", "wave")] %>%
-  gather("Type", "Value",-hashed_id, -wave) %>%
-  ggplot(aes(x=as.factor(Value), group=wave))+
-  geom_bar(aes(fill=wave),position="dodge")+
-  facet_wrap(~Type,scales = "free_x")+
-  ggtitle("Count of RAW hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-
-## ec
-ds[c(ec, "hashed_id", "wave")] %>%
-  gather("Type", "Value",-hashed_id, -wave) %>%
-  ggplot(aes(x=as.factor(Value), group=wave))+
-  geom_bar(aes(fill=wave),position="dodge")+
-  facet_wrap(~Type,scales = "free_x")+
-  ggtitle("Count of covid stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-```
-
-# descriptives by wave
+## descriptives by wave 1 only 
 
 ```{r deswave1}
 # wave 1 --------------------------------------
+
+e_items <- grep("ehc_|e_rel|et_|eg_|ec_", names(ds1), value = TRUE)
+e_raw <- c("mp18", "mp21", "mp23","mp22", "mp24", "mp25","mp25a", "mp19", "tr15", "tr16", "mp25b", "mp25c", "mp25d", "mp25e", "ep32")
+
+
+ehc <- grep("ehc_", names(ds1), value = TRUE)
+
+ec <- grep("ec_", names(ds1), value = TRUE)
+
+e_rel <- grep("e_rel", names(ds1), value = TRUE)
+et <- grep("et_", names(ds1), value = TRUE)
+eg <- grep("eg_", names(ds1), value = TRUE)
+
 knitr::kable(psych::describe(ds1[e_items]))
 knitr::kable(psych::describe(ds1[e_raw]))
 
@@ -642,6 +553,11 @@ ds1[c(e_items, "hashed_id")] %>%
   ggtitle("Count of hc stressors", subtitle = "")+
   xlab("Answer")+
   ylab("Count") 
+
+## ehc
+ds1[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  table()
 
 ## raw
 ds1[c(e_raw, "hashed_id")] %>%
@@ -664,80 +580,30 @@ ds1[c(ec, "hashed_id")] %>%
   xlab("Answer")+
   ylab("Count") 
 
-# wave 2 --------------------------------------
-knitr::kable(psych::describe(ds2[e_items]))
-knitr::kable(psych::describe(ds2[e_raw]))
 
-
-## ehc
-ds2[c(e_items, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-## raw
-ds2[c(e_raw, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of RAW hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-
-## ec
-ds2[c(ec, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of covid stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-
-# wave 3 --------------------------------------
-knitr::kable(psych::describe(ds3[e_items]))
-knitr::kable(psych::describe(ds3[e_raw]))
-
-
-## ehc
-ds3[c(e_items, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-## raw
-ds3[c(e_raw, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of RAW hc stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
-
-
-## ec
-ds3[c(ec, "hashed_id")] %>%
-  gather("Type", "Value",-hashed_id) %>%
-  ggplot(aes(x=as.factor(Value)))+
-  geom_bar(position="dodge")+
-  facet_wrap(~Type,scales = "free_x") +
-  ggtitle("Count of covid stressors", subtitle = "")+
-  xlab("Answer")+
-  ylab("Count") 
 
 ```
+
+# Roberto will fix this! 
+
+```{r robfreq}
+
+ds1 %>% 
+  select(c("mp18", "mp21", "mp23", "mp18ab","mp22", "mp25", "mp25aa", 
+           "tr15", "tr16", "mp18aa", "mp25b", "mp25c", "mp25d", "mp25e", "ep32")) %>% 
+  select(-hashed_id) %>% 
+  map(., ~ prop.table(table(.)))
+
+ds1 %>% 
+  select(
+    starts_with(c("ehc", "ec"))
+  ) %>% 
+    select(-hashed_id) %>% 
+  map(., ~ prop.table(table(.)))
+
+```
+
+
 # wave 1
 
 We calculate SR scores based on mental health exposure. 
@@ -754,9 +620,9 @@ Questions:
 
 ```{r wave-1}
 
-ds1$ehc <-rowSums(ds1[ehc], na.rm = TRUE)
-ds1$ec <-rowSums(ds1[ec], na.rm = TRUE)
-ds1$E <-rowSums(ds1[c(ehc, ec)], na.rm = TRUE)
+ds1$ehc <-psych::scoreItems(ehc, ds1[ehc], totals = TRUE)$scores
+ds1$ec <-psych::scoreItems(ec, ds1[ec], totals = TRUE)$scores
+ds1$E <-psych::scoreItems(c(ehc, ec), ds1[c(ehc, ec)], totals = TRUE)$scores
 ds1$ehc_raw <-psych::scoreItems(e_raw, ds1[e_raw])$scores
 
 
@@ -776,9 +642,36 @@ psych::pairs.panels(ds1[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )],
              hist.col = "#00AFBB",
              density = TRUE,  # show density plots
              ellipses = TRUE, # show correlation ellipses
-             main = "over all timepoints"
+             main = "all wave 1"
              )
 
+
+ds1m <- ds1 %>% 
+  filter(nuts_id == "ES300") 
+
+
+
+psych::pairs.panels(ds1m[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "madrid wave 1"
+             )
+
+ds1top <- ds1 %>%                                     
+  arrange(desc(ehc)) %>%  
+  ungroup()%>%
+  slice_max(ehc, prop = .66)
+
+
+psych::pairs.panels(ds1top[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "wave 1 top"
+             )
 
 ```
 ## sr scores, ghq, pqhq
@@ -904,84 +797,20 @@ psych::pairs.panels(ds1[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "
 
 ```
 
-# wave 2
+## wave 1 madrid
 
-In wave two we have the GAD7, so we can use the PHQADS as the basis of the SR score. 
-
-```{r wave-2}
-
-ds2$ehc <-rowSums(ds2[ehc], na.rm = TRUE)
-ds2$ec <-rowSums(ds2[ec], na.rm = TRUE)
-ds2$E <-rowSums(ds2[c(ehc, ec)], na.rm = TRUE)
-ds2$ehc_raw <-psych::scoreItems(e_raw, ds2[e_raw])$scores
+### sr scores, ghq, pqhq
+Unfortunately, the SR score and GHQ are basically the same. 
 
 
 
-ghq <- grep("^ad", names(ds2), value = TRUE)
-psych::scoreItems(ghq,items=ds2[ghq], impute = "median", totals = TRUE)
-ds2$ghq <-psych::scoreItems(ghq,items=ds2[ghq], impute = "median", totals = TRUE)$scores
+```{r sr_score_plotmadrid}
 
-phq <- grep("^phq..$", names(ds2), value = TRUE)
-psych::scoreItems(phq,items=ds2[phq], impute = "median", totals = TRUE)
-ds2$phq <-psych::scoreItems(phq,items=ds2[phq], impute = "median", totals = TRUE)$scores
-
-
-
-psych::pairs.panels(ds2[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
-             method = "pearson", # correlation method
-             hist.col = "#00AFBB",
-             density = TRUE,  # show density plots
-             ellipses = TRUE, # show correlation ellipses
-             main = "over all timepoints"
-             )
-
-
-```
-
-
-# wave 3
-
-```{r wave-3}
-ds3$ehc <-rowSums(ds3[ehc], na.rm = TRUE)
-ds3$ec <-rowSums(ds3[ec], na.rm = TRUE)
-ds3$E <-rowSums(ds3[c(ehc, ec)], na.rm = TRUE)
-ds3$ehc_raw <-psych::scoreItems(e_raw, ds3[e_raw])$scores
-
-
-
-ghq <- grep("^ad", names(ds3), value = TRUE)
-psych::scoreItems(ghq,items=ds3[ghq], impute = "median", totals = TRUE)
-ds3$ghq <-psych::scoreItems(ghq,items=ds3[ghq], impute = "median", totals = TRUE)$scores
-
-phqads <- grep("^phq..$|^gad", names(ds3), value = TRUE)
-psych::scoreItems(phqads,items=ds3[phqads], impute = "median", totals = TRUE)
-ds3$phqads <-psych::scoreItems(phqads,items=ds3[phqads], impute = "median", totals = TRUE)$scores
-
-phq <- grep("^phq..$", names(ds3), value = TRUE)
-psych::scoreItems(phq,items=ds3[phq], impute = "median", totals = TRUE)
-ds3$phq <-psych::scoreItems(phq,items=ds3[phq], impute = "median", totals = TRUE)$scores
-
-
-
-psych::pairs.panels(ds3[c("ehc", "ec", "E", "ehc_raw", "ghq", "phqads", "phq")], 
-             method = "pearson", # correlation method
-             hist.col = "#00AFBB",
-             density = TRUE,  # show density plots
-             ellipses = TRUE, # show correlation ellipses
-             main = "over all timepoints"
-             )
-
-```
-
-## sr scores wave 3 ghq, phq, phqads
-
-```{r sr-wave3}
-
-# GHQ SR score -------------------------------------------------------------
+# GHQ SR score
 ## random slopes and intercepts
 
-EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds1m)  
+EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds1m)  
 
 
 ### compare model fits
@@ -990,13 +819,13 @@ anova(EP,EP_poly,test="Chisq")
 
 ### plot differ EP lines
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
+plot <- ggplot(ds1m, aes(x = scale(E), y = scale(ghq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(method = "lm") +
   ggtitle("Linear EP line GHQ")
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
+plot <- ggplot(ds1m, aes(x = scale(E), y = scale(ghq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
@@ -1009,10 +838,10 @@ E_slope = summary(EP)$coefficients[2]
 
 ### predicted E wwould be predE = slope*actualE + intercept
 ### calculate predicted E based on this formula
-ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+ds1m$P_pred = (intercept + scale(ds1m$E)*E_slope)
 
-ds3$SR_ghq= scale(scale(ds3$ghq) - ds3$P_pred)
-ds3$RES_ghq = -(ds3$SR_ghq)
+ds1m$SR_ghq= scale(scale(ds1m$ghq) - ds1m$P_pred)
+ds1m$RES_ghq = -(ds1m$SR_ghq)
 
 
 ## poly SR score
@@ -1023,17 +852,17 @@ E_slope2_poly = summary(EP_poly)$coefficients[3]
 ### predicted E wwould be predE = slope*actualE + intercept
 ## #calculate predicted E based on this formula
 
-ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+ds1m$P_pred_poly = (intercept_poly + scale(ds1m$E)*E_slope_poly + (scale(ds1m$E)^2)*E_slope2_poly)
 
 
-ds3$SR_poly_ghq = scale(scale(ds3$ghq) -ds3$P_pred_poly)
-ds3$RES_poly_ghq <- -(ds3$SR_poly_ghq)
+ds1m$SR_poly_ghq = scale(scale(ds1m$ghq) -ds1m$P_pred_poly)
+ds1m$RES_poly_ghq <- -(ds1m$SR_poly_ghq)
 
-# phq SR score------------------------------------------------------
+# phq SR score
 ## random slopes and intercepts
 
-EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds1m)  
+EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds1m)  
 
 
 ### compare model fits
@@ -1042,13 +871,13 @@ anova(EP,EP_poly,test="Chisq")
 
 ### plot differ EP lines
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
+plot <- ggplot(ds1m, aes(x = scale(E), y = scale(phq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(method = "lm") +
   ggtitle("Linear EP line phq")
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
+plot <- ggplot(ds1m, aes(x = scale(E), y = scale(phq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
@@ -1061,10 +890,10 @@ E_slope = summary(EP)$coefficients[2]
 
 ### predicted E wwould be predE = slope*actualE + intercept
 ### calculate predicted E based on this formula
-ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+ds1m$P_pred = (intercept + scale(ds1m$E)*E_slope)
 
-ds3$SR_phq= scale(scale(ds3$phq) - ds3$P_pred)
-ds3$RES_phq = -(ds3$SR_phq)
+ds1m$SR_phq= scale(scale(ds1m$phq) - ds1m$P_pred)
+ds1m$RES_phq = -(ds1m$SR_phq)
 
 
 ## poly SR score
@@ -1075,17 +904,38 @@ E_slope2_poly = summary(EP_poly)$coefficients[3]
 ### predicted E wwould be predE = slope*actualE + intercept
 ## #calculate predicted E based on this formula
 
-ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+ds1m$P_pred_poly = (intercept_poly + scale(ds1m$E)*E_slope_poly + (scale(ds1m$E)^2)*E_slope2_poly)
 
 
-ds3$SR_poly_phq = scale(scale(ds3$phq) -ds3$P_pred_poly)
-ds3$RES_poly_phq <- -(ds3$SR_poly_phq)
+ds1m$SR_poly_phq = scale(scale(ds1m$phq) -ds1m$P_pred_poly)
+ds1m$RES_poly_phq <- -(ds1m$SR_poly_phq)
 
-# phqads SR score ---------------------------------------------------------
+
+# correlations 
+psych::pairs.panels(ds1m[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "over all timepoints"
+             )
+
+```
+
+## wave 1 top 66%
+
+### sr scores, ghq, pqhq
+Unfortunately, the SR score and GHQ are basically the same. 
+
+
+
+```{r sr_score_plottop}
+
+# GHQ SR score
 ## random slopes and intercepts
 
-EP      <- lm(scale(phqads) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-EP_poly <- lm(scale(phqads) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds1top)  
+EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds1top)  
 
 
 ### compare model fits
@@ -1094,17 +944,17 @@ anova(EP,EP_poly,test="Chisq")
 
 ### plot differ EP lines
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
+plot <- ggplot(ds1top, aes(x = scale(E), y = scale(ghq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(method = "lm") +
-  ggtitle("Linear EP line phqads")
+  ggtitle("Linear EP line GHQ")
 
-plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
+plot <- ggplot(ds1top, aes(x = scale(E), y = scale(ghq))) +
   geom_point() +
   labs(x="E", y="P") +
   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-    ggtitle("quadratic E-P line phqads")
+    ggtitle("quadratic E-P line GHQ")
 
 
 ## calc linear SR score
@@ -1113,10 +963,10 @@ E_slope = summary(EP)$coefficients[2]
 
 ### predicted E wwould be predE = slope*actualE + intercept
 ### calculate predicted E based on this formula
-ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+ds1top$P_pred = (intercept + scale(ds1top$E)*E_slope)
 
-ds3$SR_phqads= scale(scale(ds3$phqads) - ds3$P_pred)
-ds3$RES_phqads = -(ds3$SR_phqads)
+ds1top$SR_ghq= scale(scale(ds1top$ghq) - ds1top$P_pred)
+ds1top$RES_ghq = -(ds1top$SR_ghq)
 
 
 ## poly SR score
@@ -1127,22 +977,248 @@ E_slope2_poly = summary(EP_poly)$coefficients[3]
 ### predicted E wwould be predE = slope*actualE + intercept
 ## #calculate predicted E based on this formula
 
-ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+ds1top$P_pred_poly = (intercept_poly + scale(ds1top$E)*E_slope_poly + (scale(ds1top$E)^2)*E_slope2_poly)
 
 
-ds3$SR_poly_phqads = scale(scale(ds3$phqads) -ds3$P_pred_poly)
-ds3$RES_poly_phqads <- -(ds3$SR_poly_phqads)
+ds1top$SR_poly_ghq = scale(scale(ds1top$ghq) -ds1top$P_pred_poly)
+ds1top$RES_poly_ghq <- -(ds1top$SR_poly_ghq)
+
+# phq SR score
+## random slopes and intercepts
+
+EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds1top)  
+EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds1top)  
 
 
-# correlations -----------------------------------------------------
+### compare model fits
+anova(EP,EP_poly,test="Chisq")
 
-psych::pairs.panels(ds3[c("RES_phqads", "RES_poly_phqads","RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq", "phqads")], 
+
+### plot differ EP lines
+
+plot <- ggplot(ds1top, aes(x = scale(E), y = scale(phq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear EP line phq")
+
+plot <- ggplot(ds1top, aes(x = scale(E), y = scale(phq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line phq")
+
+
+## calc linear SR score
+intercept = summary(EP)$coefficients[1]
+E_slope = summary(EP)$coefficients[2]
+
+### predicted E wwould be predE = slope*actualE + intercept
+### calculate predicted E based on this formula
+ds1top$P_pred = (intercept + scale(ds1top$E)*E_slope)
+
+ds1top$SR_phq= scale(scale(ds1top$phq) - ds1top$P_pred)
+ds1top$RES_phq = -(ds1top$SR_phq)
+
+
+## poly SR score
+intercept_poly = summary(EP_poly)$coefficients[1]
+E_slope_poly = summary(EP_poly)$coefficients[2]
+E_slope2_poly = summary(EP_poly)$coefficients[3]
+
+### predicted E wwould be predE = slope*actualE + intercept
+## #calculate predicted E based on this formula
+
+ds1top$P_pred_poly = (intercept_poly + scale(ds1top$E)*E_slope_poly + (scale(ds1top$E)^2)*E_slope2_poly)
+
+
+ds1top$SR_poly_phq = scale(scale(ds1top$phq) -ds1top$P_pred_poly)
+ds1top$RES_poly_phq <- -(ds1top$SR_poly_phq)
+
+
+# correlations 
+psych::pairs.panels(ds1top[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq")], 
              method = "pearson", # correlation method
              hist.col = "#00AFBB",
              density = TRUE,  # show density plots
              ellipses = TRUE, # show correlation ellipses
              main = "over all timepoints"
              )
+
+```
+
+
+
+## sr scores wave 3 ghq, phq, phqads
+
+```{r sr-wave3}
+
+# # GHQ SR score -------------------------------------------------------------
+# ## random slopes and intercepts
+# 
+# EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
+# EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+# 
+# 
+# ### compare model fits
+# anova(EP,EP_poly,test="Chisq")
+# 
+# 
+# ### plot differ EP lines
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(method = "lm") +
+#   ggtitle("Linear EP line GHQ")
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+#     ggtitle("quadratic E-P line GHQ")
+# 
+# 
+# ## calc linear SR score
+# intercept = summary(EP)$coefficients[1]
+# E_slope = summary(EP)$coefficients[2]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ### calculate predicted E based on this formula
+# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+# 
+# ds3$SR_ghq= scale(scale(ds3$ghq) - ds3$P_pred)
+# ds3$RES_ghq = -(ds3$SR_ghq)
+# 
+# 
+# ## poly SR score
+# intercept_poly = summary(EP_poly)$coefficients[1]
+# E_slope_poly = summary(EP_poly)$coefficients[2]
+# E_slope2_poly = summary(EP_poly)$coefficients[3]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ## #calculate predicted E based on this formula
+# 
+# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+# 
+# 
+# ds3$SR_poly_ghq = scale(scale(ds3$ghq) -ds3$P_pred_poly)
+# ds3$RES_poly_ghq <- -(ds3$SR_poly_ghq)
+# 
+# # phq SR score------------------------------------------------------
+# ## random slopes and intercepts
+# 
+# EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
+# EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+# 
+# 
+# ### compare model fits
+# anova(EP,EP_poly,test="Chisq")
+# 
+# 
+# ### plot differ EP lines
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(method = "lm") +
+#   ggtitle("Linear EP line phq")
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+#     ggtitle("quadratic E-P line phq")
+# 
+# 
+# ## calc linear SR score
+# intercept = summary(EP)$coefficients[1]
+# E_slope = summary(EP)$coefficients[2]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ### calculate predicted E based on this formula
+# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+# 
+# ds3$SR_phq= scale(scale(ds3$phq) - ds3$P_pred)
+# ds3$RES_phq = -(ds3$SR_phq)
+# 
+# 
+# ## poly SR score
+# intercept_poly = summary(EP_poly)$coefficients[1]
+# E_slope_poly = summary(EP_poly)$coefficients[2]
+# E_slope2_poly = summary(EP_poly)$coefficients[3]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ## #calculate predicted E based on this formula
+# 
+# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+# 
+# 
+# ds3$SR_poly_phq = scale(scale(ds3$phq) -ds3$P_pred_poly)
+# ds3$RES_poly_phq <- -(ds3$SR_poly_phq)
+# 
+# # phqads SR score ---------------------------------------------------------
+# ## random slopes and intercepts
+# 
+# EP      <- lm(scale(phqads) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
+# EP_poly <- lm(scale(phqads) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
+# 
+# 
+# ### compare model fits
+# anova(EP,EP_poly,test="Chisq")
+# 
+# 
+# ### plot differ EP lines
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(method = "lm") +
+#   ggtitle("Linear EP line phqads")
+# 
+# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+#     ggtitle("quadratic E-P line phqads")
+# 
+# 
+# ## calc linear SR score
+# intercept = summary(EP)$coefficients[1]
+# E_slope = summary(EP)$coefficients[2]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ### calculate predicted E based on this formula
+# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
+# 
+# ds3$SR_phqads= scale(scale(ds3$phqads) - ds3$P_pred)
+# ds3$RES_phqads = -(ds3$SR_phqads)
+# 
+# 
+# ## poly SR score
+# intercept_poly = summary(EP_poly)$coefficients[1]
+# E_slope_poly = summary(EP_poly)$coefficients[2]
+# E_slope2_poly = summary(EP_poly)$coefficients[3]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ## #calculate predicted E based on this formula
+# 
+# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
+# 
+# 
+# ds3$SR_poly_phqads = scale(scale(ds3$phqads) -ds3$P_pred_poly)
+# ds3$RES_poly_phqads <- -(ds3$SR_poly_phqads)
+# 
+# 
+# # correlations -----------------------------------------------------
+# 
+# psych::pairs.panels(ds3[c("RES_phqads", "RES_poly_phqads","RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq", "phqads")], 
+#              method = "pearson", # correlation method
+#              hist.col = "#00AFBB",
+#              density = TRUE,  # show density plots
+#              ellipses = TRUE, # show correlation ellipses
+#              main = "over all timepoints"
+#              )
 
 ```
 
@@ -1152,149 +1228,149 @@ psych::pairs.panels(ds3[c("RES_phqads", "RES_poly_phqads","RES_phq", "RES_poly_p
 
 ```{r ds-complete}
 
-dsc$ehc <-rowSums(dsc[ehc], na.rm = TRUE)
-dsc$ec <-rowSums(dsc[ec], na.rm = TRUE)
-dsc$E <-rowSums(dsc[c(ehc, ec)], na.rm = TRUE)
-dsc$ehc_raw <-rowSums(dsc[e_raw], na.rm = FALSE)
-
-
-
-ghq <- grep("^ad", names(dsc), value = TRUE)
-psych::scoreItems(ghq,items=dsc[ghq], impute = "median", totals = TRUE)
-dsc$ghq <-psych::scoreItems(ghq,items=dsc[ghq], impute = "median", totals = TRUE)$scores
-
-phq <- grep("^phq..$", names(dsc), value = TRUE)
-psych::scoreItems(phq,items=dsc[phq], impute = "median", totals = TRUE)
-dsc$phq <-psych::scoreItems(phq,items=dsc[phq], impute = "median", totals = TRUE)$scores
-
-
-
-psych::pairs.panels(dsc[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
-             method = "pearson", # correlation method
-             hist.col = "#00AFBB",
-             density = TRUE,  # show density plots
-             ellipses = TRUE, # show correlation ellipses
-             main = "over all timepoints"
-             )
+# dsc$ehc <-rowSums(dsc[ehc], na.rm = TRUE)
+# dsc$ec <-rowSums(dsc[ec], na.rm = TRUE)
+# dsc$E <-rowSums(dsc[c(ehc, ec)], na.rm = TRUE)
+# dsc$ehc_raw <-rowSums(dsc[e_raw], na.rm = FALSE)
+# 
+# 
+# 
+# ghq <- grep("^ad", names(dsc), value = TRUE)
+# psych::scoreItems(ghq,items=dsc[ghq], impute = "median", totals = TRUE)
+# dsc$ghq <-psych::scoreItems(ghq,items=dsc[ghq], impute = "median", totals = TRUE)$scores
+# 
+# phq <- grep("^phq..$", names(dsc), value = TRUE)
+# psych::scoreItems(phq,items=dsc[phq], impute = "median", totals = TRUE)
+# dsc$phq <-psych::scoreItems(phq,items=dsc[phq], impute = "median", totals = TRUE)$scores
+# 
+# 
+# 
+# psych::pairs.panels(dsc[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
+#              method = "pearson", # correlation method
+#              hist.col = "#00AFBB",
+#              density = TRUE,  # show density plots
+#              ellipses = TRUE, # show correlation ellipses
+#              main = "over all timepoints"
+#              )
 
 
 ```
 
 ```{r sr-complete}
-
-# GHQ SR score
-## random slopes and intercepts
-
-EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=dsc)  
-EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=dsc)  
-
-
-### compare model fits
-anova(EP,EP_poly,test="Chisq")
-
-
-### plot differ EP lines
-
-plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq))) +
-  geom_point() +
-  labs(x="E", y="P") +
-  geom_smooth(method = "lm") +
-  ggtitle("Linear EP line GHQ")
-
-plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq))) +
-  geom_point() +
-  labs(x="E", y="P") +
-  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-    ggtitle("quadratic E-P line GHQ")
-
-
-## calc linear SR score
-intercept = summary(EP)$coefficients[1]
-E_slope = summary(EP)$coefficients[2]
-
-### predicted E wwould be predE = slope*actualE + intercept
-### calculate predicted E based on this formula
-dsc$P_pred = (intercept + scale(dsc$E)*E_slope)
-
-dsc$SR_ghq= scale(scale(dsc$ghq) - dsc$P_pred)
-dsc$RES_ghq = -(dsc$SR_ghq)
-
-
-## poly SR score
-intercept_poly = summary(EP_poly)$coefficients[1]
-E_slope_poly = summary(EP_poly)$coefficients[2]
-E_slope2_poly = summary(EP_poly)$coefficients[3]
-
-### predicted E wwould be predE = slope*actualE + intercept
-## #calculate predicted E based on this formula
-
-dsc$P_pred_poly = (intercept_poly + scale(dsc$E)*E_slope_poly + (scale(dsc$E)^2)*E_slope2_poly)
-
-
-dsc$SR_poly_ghq = scale(scale(dsc$ghq) -dsc$P_pred_poly)
-dsc$RES_poly_ghq <- -(dsc$SR_poly_ghq)
-
-# phq SR score
-## random slopes and intercepts
-
-EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=dsc)  
-EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=dsc)  
-
-
-### compare model fits
-anova(EP,EP_poly,test="Chisq")
-
-
-### plot differ EP lines
-
-plot <- ggplot(dsc, aes(x = scale(E), y = scale(phq))) +
-  geom_point() +
-  labs(x="E", y="P") +
-  geom_smooth(method = "lm") +
-  ggtitle("Linear EP line phq")
-
-plot <- ggplot(dsc, aes(x = scale(E), y = scale(phq))) +
-  geom_point() +
-  labs(x="E", y="P") +
-  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-    ggtitle("quadratic E-P line phq")
-
-
-## calc linear SR score
-intercept = summary(EP)$coefficients[1]
-E_slope = summary(EP)$coefficients[2]
-
-### predicted E wwould be predE = slope*actualE + intercept
-### calculate predicted E based on this formula
-dsc$P_pred = (intercept + scale(dsc$E)*E_slope)
-
-dsc$SR_phq= scale(scale(dsc$phq) - dsc$P_pred)
-dsc$RES_phq = -(dsc$SR_phq)
-
-
-## poly SR score
-intercept_poly = summary(EP_poly)$coefficients[1]
-E_slope_poly = summary(EP_poly)$coefficients[2]
-E_slope2_poly = summary(EP_poly)$coefficients[3]
-
-### predicted E wwould be predE = slope*actualE + intercept
-## #calculate predicted E based on this formula
-
-dsc$P_pred_poly = (intercept_poly + scale(dsc$E)*E_slope_poly + (scale(dsc$E)^2)*E_slope2_poly)
-
-
-dsc$SR_poly_phq = scale(scale(dsc$phq) -dsc$P_pred_poly)
-dsc$RES_poly_phq <- -(dsc$SR_poly_phq)
-
-
-# correlations 
-psych::pairs.panels(dsc[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq")], 
-             method = "pearson", # correlation method
-             hist.col = "#00AFBB",
-             density = TRUE,  # show density plots
-             ellipses = TRUE, # show correlation ellipses
-             main = "over all timepoints"
-             )
+# 
+# # GHQ SR score
+# ## random slopes and intercepts
+# 
+# EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=dsc)  
+# EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=dsc)  
+# 
+# 
+# ### compare model fits
+# anova(EP,EP_poly,test="Chisq")
+# 
+# 
+# ### plot differ EP lines
+# 
+# plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(method = "lm") +
+#   ggtitle("Linear EP line GHQ")
+# 
+# plot <- ggplot(dsc, aes(x = scale(E), y = scale(ghq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+#     ggtitle("quadratic E-P line GHQ")
+# 
+# 
+# ## calc linear SR score
+# intercept = summary(EP)$coefficients[1]
+# E_slope = summary(EP)$coefficients[2]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ### calculate predicted E based on this formula
+# dsc$P_pred = (intercept + scale(dsc$E)*E_slope)
+# 
+# dsc$SR_ghq= scale(scale(dsc$ghq) - dsc$P_pred)
+# dsc$RES_ghq = -(dsc$SR_ghq)
+# 
+# 
+# ## poly SR score
+# intercept_poly = summary(EP_poly)$coefficients[1]
+# E_slope_poly = summary(EP_poly)$coefficients[2]
+# E_slope2_poly = summary(EP_poly)$coefficients[3]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ## #calculate predicted E based on this formula
+# 
+# dsc$P_pred_poly = (intercept_poly + scale(dsc$E)*E_slope_poly + (scale(dsc$E)^2)*E_slope2_poly)
+# 
+# 
+# dsc$SR_poly_ghq = scale(scale(dsc$ghq) -dsc$P_pred_poly)
+# dsc$RES_poly_ghq <- -(dsc$SR_poly_ghq)
+# 
+# # phq SR score
+# ## random slopes and intercepts
+# 
+# EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=dsc)  
+# EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=dsc)  
+# 
+# 
+# ### compare model fits
+# anova(EP,EP_poly,test="Chisq")
+# 
+# 
+# ### plot differ EP lines
+# 
+# plot <- ggplot(dsc, aes(x = scale(E), y = scale(phq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(method = "lm") +
+#   ggtitle("Linear EP line phq")
+# 
+# plot <- ggplot(dsc, aes(x = scale(E), y = scale(phq))) +
+#   geom_point() +
+#   labs(x="E", y="P") +
+#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+#     ggtitle("quadratic E-P line phq")
+# 
+# 
+# ## calc linear SR score
+# intercept = summary(EP)$coefficients[1]
+# E_slope = summary(EP)$coefficients[2]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ### calculate predicted E based on this formula
+# dsc$P_pred = (intercept + scale(dsc$E)*E_slope)
+# 
+# dsc$SR_phq= scale(scale(dsc$phq) - dsc$P_pred)
+# dsc$RES_phq = -(dsc$SR_phq)
+# 
+# 
+# ## poly SR score
+# intercept_poly = summary(EP_poly)$coefficients[1]
+# E_slope_poly = summary(EP_poly)$coefficients[2]
+# E_slope2_poly = summary(EP_poly)$coefficients[3]
+# 
+# ### predicted E wwould be predE = slope*actualE + intercept
+# ## #calculate predicted E based on this formula
+# 
+# dsc$P_pred_poly = (intercept_poly + scale(dsc$E)*E_slope_poly + (scale(dsc$E)^2)*E_slope2_poly)
+# 
+# 
+# dsc$SR_poly_phq = scale(scale(dsc$phq) -dsc$P_pred_poly)
+# dsc$RES_poly_phq <- -(dsc$SR_poly_phq)
+# 
+# 
+# # correlations 
+# psych::pairs.panels(dsc[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq")], 
+#              method = "pearson", # correlation method
+#              hist.col = "#00AFBB",
+#              density = TRUE,  # show density plots
+#              ellipses = TRUE, # show correlation ellipses
+#              main = "over all timepoints"
+#              )
 
 ```
 
