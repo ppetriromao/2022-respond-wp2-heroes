@@ -587,7 +587,7 @@ ds1[c(ec, "hashed_id")] %>%
 
 ```
 
-# Roberto will fix this!
+### freq tables
 
 ```{r}
 ds1 %>% 
