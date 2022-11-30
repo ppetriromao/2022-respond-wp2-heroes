@@ -7,6 +7,8 @@ output:
     toc: true
     toc_depth: 2
     toc_float: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +17,8 @@ knitr::opts_chunk$set(echo = FALSE)
 require(pacman)
 p_load(tidyverse,
        psych,
-       lme4)
+       lme4,
+       gtsummary)
 
 ds <- readRDS("data/heroes_wp2_anonymised.rds")
 
@@ -436,11 +439,11 @@ ds1 <- ds1 %>%
                       mp25e == 2 ~ 0,
                       mp25e == 3 ~ 1,
                       mp25e == 4 ~ 1), # violence due to health worker
-    ehc_9 = ep32,
+    ehc_9 = ep32,  # need to prioritise patients
     ehc_10 = case_when(mp19 == 3~ 0,
                        mp19 == 2~ 1,
                        mp19 == 1~ 1,
-                       mp19 == 0~ 1,)) # need to prioritise patients
+                       mp19 == 0~ 1,)) # PPE shortages
 
 
 ## covid stressors
@@ -455,7 +458,7 @@ ds1 <- ds1 %>%
                      mp23 == 1 ~1,
                      mp23 == 2 ~1,
                      mp23 == 3 ~1), # worried about infecting someone
-    ec_5 = case_when(mp22 >=1 ~1
+    ec_5 = case_when(mp22 > 0 ~ 1
                      ), # days in isolation
     ec_6 = mp25, # death duie to covid
     ec_8 = mp25a,
@@ -585,6 +588,39 @@ ds1[c(ec, "hashed_id")] %>%
 ```
 
 # Roberto will fix this! 
+
+```{r}
+ds1 %>% 
+  filter(wave == 1) %>% 
+  ungroup() %>% 
+  select(c("mp18",
+           "mp21",
+           "mp23",
+           "mp22", 
+           "mp24", 
+           "mp25",
+           "mp25a", 
+           "mp19", 
+           "tr15", 
+           "tr16", 
+           "mp25b", 
+           "mp25c",
+           "mp25d",
+           "mp25e",
+           "ep32")) %>%
+  gtsummary::tbl_summary(.)
+
+ds1 %>% 
+  filter(wave == 1) %>% 
+  ungroup() %>% 
+  select(starts_with(c("ehc","ec"))) %>% 
+  gtsummary::tbl_summary(.)
+```
+
+```{r}
+
+```
+
 
 ```{r robfreq}
 
