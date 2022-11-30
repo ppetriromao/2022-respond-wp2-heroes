@@ -584,7 +584,7 @@ ds1[c(ec, "hashed_id")] %>%
 
 ```
 
-# Roberto will fix this! 
+# Roberto will fix this!
 
 ```{r robfreq}
 
