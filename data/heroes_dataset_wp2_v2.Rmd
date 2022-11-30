@@ -1,0 +1,1304 @@
+---
+title: "heroes_dataset_wp2_v2"
+author: "Roberto Mediavilla"
+date: '2022-08-11'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setlocale(category = "LC_ALL", locale = "es")
+```
+
+```{r req pack, include = FALSE}
+library(tidyverse)
+library(lubridate)
+library(naniar)
+```
+
+# Overview
+
+Here, I prepare the full HEROES dataset (3 assessment waves) to be uploaded to OPAL, as part of RESPOND WP2 IPD meta-analysis. I will follow the [OPAL handbook for WP2](https://drzmainz.sharepoint.com/:w:/r/sites/obiba-wp2/Shared%20Documents/harmonisation/data%20upload%20preparation/handbook_datauploadprep.docx?d=w15b8e9fe38734104a507dcedc3af3d49&csf=1&web=1&e=6Hu6Lm)
+
+1. Merge all the assessment waves in a dataset with a number of rows equal to wavesBYparticipants. 
+2. Create as many new variables as needed, as per the OPAL handbook for WP2.
+3. Transform variables that require transformation outside the OBIBA environment (sensitive data).
+4. Remove all columns that are not included in the RESPOND WP2 codebook. 
+5. Recode missing data
+5. Create a new hashed ID and remove the old one. 
+6. Export a .csv file to be uploaded to OPAL.
+
+## Import data
+
+```{r collapse=TRUE}
+raw_t0 <- 
+  readr::read_csv2("data/20210329_heroes_t0.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE,
+                  skip = 1)
+
+headers <- raw_t0[1,]
+colnames(raw_t0) <- headers
+raw_t0 <- raw_t0[-1,]
+remove(headers)
+
+raw_t1 <- 
+  readr::read_csv2("data/20210329_heroes_t1.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE,
+                  skip = 1)
+
+headers <- raw_t1[1,]
+colnames(raw_t1) <- headers
+raw_t1 <- raw_t1[-1,]
+remove(headers)
+
+raw_t2 <- 
+  readr::read_csv2("data/20220526_heroes_t2.csv",
+                  col_names = FALSE,
+                  trim_ws = TRUE)
+
+headers <- raw_t2[1,]
+colnames(raw_t2) <- headers
+raw_t2 <- raw_t2[-1,]
+remove(headers)
+```
+
+```{r}
+codebook_t0 <- readxl::read_xlsx("data/heroes_codebook.xlsx",
+                                 sheet = 1) %>% 
+  janitor::clean_names()
+codebook_t1 <- readxl::read_xlsx("data/heroes_codebook.xlsx",
+                                 sheet = 2) %>% 
+  janitor::clean_names()
+codebook_t2 <- readxl::read_xlsx("data/heroes_codebook.xlsx",
+                                 sheet = 3) %>% 
+  janitor::clean_names()
+```
+
+
+# Include all individual participants across waves
+
+## Remove and rename variables
+
+### Repeated columns
+
+I found that two of the datasets have repeated colnamnes, which will become a problem later on. Since I am not interested in those variables, I just remove them (for details, see the heroes_syntax_may_2022.Rmd file)
+
+```{r}
+raw_t0 <- 
+  raw_t0 %>% 
+  select(!starts_with("PCL"))
+raw_t2 <- 
+  raw_t2 %>% 
+  select(!starts_with("BR"))
+```
+
+### Colnames at T2
+
+Before I merge the three datasets into one, I need to remove weird prefixes from wave 3 variables
+
+```{r}
+colnames(raw_t2)
+```
+
+```{r}
+raw_t2 <- 
+  raw_t2 %>% 
+  rename(`Fecha inicio` = "Fecha_inicio",
+         `Fecha fin` = "Fecha_fin")
+```
+
+```{r}
+raw_t2_colnames <- colnames(raw_t2)
+```
+
+```{r}
+raw_t2_colnames_edited <- 
+  str_replace(raw_t2_colnames,
+            "[:alnum:]+3",
+            "")
+```
+
+```{r}
+raw_t2_colnames_edited <- 
+  str_replace(raw_t2_colnames_edited,
+              "^_", "")
+```
+
+```{r eval = FALSE}
+ds_colnames <- bind_cols(raw_t2_colnames,
+                         raw_t2_colnames_edited)
+rm(ds_colnames)
+```
+
+```{r}
+colnames(raw_t2) <- raw_t2_colnames_edited
+```
+
+```{r}
+rm(raw_t2_colnames,
+   raw_t2_colnames_edited)
+```
+
+### Ps support
+
+*This is how the psychological support section is structured at T0*
+
+**RA52**	Selección Múltiple	Since the beginning of the pandemic, have you needed psychological support (even if you have not received it)? 	
+0: No
+1: Yes
+**RA52a**	Selección Múltiple	Have you received in-person psychological support?
+0: No
+1: Yes
+**RA52b**	Selección Múltiple	How much did it help you?	
+0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely 
+**RA52c**	Selección Múltiple	Have you received long-distance psychological support (e.g. by phone, online, by video call or video conference, by chat, or through an application)? 	
+0: No
+1: Yes
+**RA52d**	Selección Múltiple	How much did it help you?
+0: Not at all
+1: Slightly
+2: Moderately
+3: Considerably
+4: Extremely 
+
+*And this is how it is structured at T1 and T2*
+
+RA52a	Checks	In the past three months, even if you have not received them, have you required any of the following specific supports due to the pandemic? (Select all that apply, or none)	1:00
+		Psychological support	0:00
+		
+		RA53a	Checks	In the past three months, have you received any of the following supports due to the pandemic? (Select all that apply, or none)	1:00
+		In-person psychological support 	0:00
+RA53b	Checks	In the past three months, have you received any of the following supports due to the pandemic? (Select all that apply, or none)	1:00
+		Long-distance psychological support (e.g., by phone, online, by video call or video conference, by chat or through an application)	0:00
+		
+
+```{r eval = TRUE}
+#TODO: eval FALSE if not working 
+
+raw_t0 %>% 
+  mutate(ps_need = RA52 %>% 
+           as_factor()) -> raw_t0 # Needed psychological support
+
+raw_t1 %>% 
+  mutate(ps_need = RA52a %>% 
+           as_factor()) -> raw_t1 # Needed psychological support
+
+raw_t2 %>% 
+  mutate(ps_need = RA52a %>% 
+           as_factor()) -> raw_t2 # Needed psychological support
+
+raw_t0 %>% 
+  mutate(ps_inperson = as_factor(RA52a),
+         ps_online= as_factor(RA52c)) -> raw_t0 # Needed psychological support
+
+raw_t1 %>% 
+  mutate(ps_inperson = as_factor(RA53a),
+         ps_online= as_factor(RA53b)) -> raw_t1 # Needed psychological support
+
+raw_t2 %>% 
+  mutate(ps_inperson = as_factor(RA53a),
+         ps_online= as_factor(RA53b)) -> raw_t2
+
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_need_rec = case_when(!is.na(RA56) & is.na(ps_need) ~ "0",
+                                 is.na(RA56) & is.na(ps_need) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_need_rec = case_when(!is.na(RA56) & is.na(ps_need) ~ "0",
+                                 is.na(RA56) & is.na(ps_need) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_inperson_rec = case_when(!is.na(RA56) & is.na(ps_inperson) ~ "0",
+                                 is.na(RA56) & is.na(ps_inperson) ~ NA_character_,
+                                 ps_inperson == "1" ~ "1",
+                                 ps_inperson == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_inperson_rec = case_when(!is.na(RA56) & is.na(ps_inperson) ~ "0",
+                                 is.na(RA56) & is.na(ps_inperson) ~ NA_character_,
+                                 ps_need == "1" ~ "1",
+                                 ps_need == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+raw_t1 <- 
+  raw_t1 %>% 
+  mutate(ps_online_rec = case_when(!is.na(RA56) & is.na(ps_online) ~ "0",
+                                 is.na(RA56) & is.na(ps_online) ~ NA_character_,
+                                 ps_online == "1" ~ "1",
+                                 ps_online == "0" ~ "0") %>% # Check this line
+           as_factor(), 
+         )
+
+raw_t2 <-  
+  raw_t2 %>% 
+  mutate(ps_online_rec = case_when(!is.na(RA56) & is.na(ps_online) ~ "0",
+                                 is.na(RA56) & is.na(ps_online) ~ NA_character_,
+                                 ps_online == "1" ~ "1",
+                                 ps_online == "0" ~ "0") %>% # Check this line
+           as_factor(),
+         )
+```
+
+### Bind rows
+
+```{r}
+df <- 
+  bind_rows(raw_t0, 
+            raw_t1,
+            raw_t2,
+          .id = "wave")
+```
+
+
+## Remove observations
+
+I delete ~ 200 observations that are tests or simply not valid 
+
+```{r}
+df <- 
+  df %>% 
+  filter(wave == "3" | 
+           `Fecha inicio` <= "2020-06-22 02:00:00" | 
+           `Fecha inicio`>= "2021-01-26 00:00:00",
+         !ID %in% c("2", "3", "60", "160", "275", "536", "1778", "7221"),
+         !is.na(SD01))
+```
+
+## Add observations
+
+I need to make sure that each unique Identifier is represented three times in the dataset, regardless of whether they completed one, two, or three assessment waves.
+
+```{r}
+df %>% 
+  select(Identificador) %>% 
+  group_by(Identificador) %>% 
+  summarise(n = n()) -> unique_ids
+```
+
+```{r}
+unique_ids <- 
+  unique_ids %>% 
+  select(Identificador)
+```
+
+Now I need to go again to the raw datasets
+
+```{r}
+raw_t0_complete <- 
+  right_join(raw_t0,
+             unique_ids,
+             by = "Identificador")
+```
+
+```{r}
+raw_t1_complete <- 
+  right_join(raw_t1,
+             unique_ids,
+             by = "Identificador")
+```
+
+```{r}
+raw_t2_complete <- 
+  right_join(raw_t2,
+             unique_ids,
+             by = "Identificador")
+```
+
+## Complete dataset
+
+```{r}
+df <- 
+  bind_rows(raw_t0_complete, 
+            raw_t1_complete,
+            raw_t2_complete,
+            .id = "wave")
+```
+
+# Create new variables
+
+## Lockdown stringency index
+
+The file has got data from several countries. I only want to import the Spanish data.
+
+```{r}
+stringency_index <- 
+  readr::read_csv("https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/OxCGRT_nat_latest.csv") %>% 
+  filter(CountryCode == "ESP")
+```
+
+```{r}
+stringency_index <- 
+  stringency_index %>% 
+  mutate(date = ymd(Date)) %>% 
+  select(!Date)
+```
+
+```{r}
+df %>% 
+  mutate(date = as_date(`Fecha inicio`)) -> df
+```
+
+```{r}
+df_str <- left_join(df,
+                    stringency_index,
+                    by = "date")
+rm(stringency_index)
+```
+
+## Income quartiles and quintiles
+
+```{r}
+income <- 
+  tibble(
+  year = as.double(c("2018", "2019", "2020")),
+  quintile_1 = c(8549, 8847, 9449),
+  quintile_2 = c(12647,12997,13840),
+  quintile_3 = c(17064,17422,18526),
+  quintile_4 = c(23666,24104,25189),
+  quartile_1 = c(9509,9816,10562),
+  quartile_2 = c(14785,15015,16043),
+  quartile_3 = c(21656,22024,23295)
+)
+```
+
+I actually need only the 2020 information, because there is no previous data. I create the income dataset in case it can get expanded soon.
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(year = year(date))
+```
+
+```{r}
+df_str <- 
+  left_join(df_str,
+          income,
+          by = "year")
+rm(income)
+```
+
+## Google Mobility / NUTS
+
+### Relational data
+
+I need to merge the data from the Google Mobility report with my dataset. For that purpose, I need four relational datasets.
+
+```{r}
+mobility <- 
+  readr::read_delim("data/2022_ES_Region_Mobility_Report.csv",
+                    delim = ",")
+```
+
+```{r collapse=TRUE}
+mobility %>% 
+  select(sub_region_1) %>% 
+  table() # CCAA
+mobility %>% 
+  select(sub_region_2) %>% 
+  table() # Province
+```
+
+In the mobility dataset, I am interested in the "sub_region_2" variable, which is also included in the NUTS dataset. I edited the NUTS dataset before reading it to simplify the process
+
+```{r}
+nuts_provinces <- 
+  readxl::read_xlsx("data/nuts_level_3_provinces.xlsx")
+```
+
+```{r}
+nuts_urbanrural <- 
+  readxl::read_xlsx("data/nuts_urbanrural.xlsx")
+```
+
+```{r}
+nuts_urbanruralremoteness <- 
+  readxl::read_xlsx("data/nuts_urbanruralremoteness.xlsx")
+```
+
+Now I can link the outcomes from Google and NUTS.
+
+```{r}
+nuts_pc <- 
+  readr::read_delim("data/pc2020_ES_NUTS-2021_v1.0.csv",
+                    delim = ";")
+```
+
+```{r}
+nuts_pc <- 
+  nuts_pc %>% 
+  mutate(NUTS3 = str_replace_all(NUTS3,
+                                   "'",
+                                   ""),
+         CODE  = str_replace_all(CODE,
+                                   "'",
+                                   "")
+  )
+```
+
+And now I can link outcomes from Google and NUTS with my df through postcodes
+
+To do so, I will first merge all the NUTS datasets
+
+```{r collapse=TRUE}
+str(nuts_pc)
+str(nuts_provinces)
+str(nuts_urbanrural)
+str(nuts_urbanruralremoteness)
+```
+
+```{r}
+nuts_pc  <- 
+  nuts_pc %>% 
+  rename(nuts_id = NUTS3,
+         SD01a = CODE)
+nuts_urbanrural <- 
+  nuts_urbanrural %>% 
+  rename(nuts_id = NUTS_ID,
+         nuts_urbanrural_category = `URBAN-RURAL CATEGORY`,
+         nuts_urbanrural_label = `URBAN-RURAL LABEL`)
+nuts_urbanruralremoteness <- 
+  nuts_urbanruralremoteness %>% 
+  rename(nuts_id = `NUTS ID`,
+         nuts_remoteness_category = `CATEGORY CODE`,
+         nuts_remoteness_label = `CATEGORY LABEL`)
+nuts_provinces <- 
+  nuts_provinces %>% 
+  rename(nuts_id = `Code 2021`,
+         province = `NUTS level 3`)
+```
+
+Succesive merging
+
+```{r}
+nuts_ds <- 
+  left_join(nuts_pc,
+          nuts_provinces,
+          by = "nuts_id") %>% 
+  left_join(.,
+            nuts_urbanrural,
+            by = "nuts_id") %>% 
+  left_join(.,
+            nuts_urbanruralremoteness,
+            by = "nuts_id")
+```
+
+```{r}
+rm(nuts_pc,
+   nuts_provinces,
+   nuts_urbanrural,
+   nuts_urbanruralremoteness)
+```
+
+```{r}
+mobility %>% 
+  filter(!sub_region_2 %in% nuts_ds$province) %>% 
+  select(sub_region_2) %>% 
+  table() # I need to change these names
+nuts_ds$province %>% table()
+```
+
+```{r}
+mobility %>% 
+  mutate(sub_region_2 = str_replace_all(sub_region_2,
+                                            "Álava",
+                                            "Araba/Álava"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Alicante",
+                                    "Alacant/Alicante"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Biscay",
+                                    "Bizkaia"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Castellón",
+                                    "Castellón/Castelló"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Las Palmas",
+                                    "Gran Canaria"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Santa Cruz de Tenerife",
+                                    "Tenerife"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Province of Ourense",
+                                    "Ourense"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Seville",
+                                    "Sevilla"),
+         sub_region_2 = str_replace_all(sub_region_2,
+                                    "Valencia",
+                                    "Valencia/València")
+         ) %>%
+  rename(province = sub_region_2) -> mobility
+```
+
+### Add info to the main dataset
+
+```{r}
+df_str <- 
+  left_join(df_str,
+            nuts_ds,
+            by = "SD01a")
+rm(nuts_ds)
+```
+
+```{r}
+left_join(df_str,
+          mobility,
+          by = c("date", "province"))
+```
+
+The number of rows gets higher when I merge these two datasets. I think that is because there are several NAs in the mobility dataset
+
+```{r}
+mobility %>% 
+  mutate(province = as.factor(province)) %>% 
+  select(province) %>% 
+  group_by(province) %>% 
+  count() %>% 
+  data.frame # 4340 NAs
+```
+
+```{r}
+mobility_red <- 
+  mobility %>% 
+  select(date:province) %>% 
+  filter(!is.na(province))
+```
+
+```{r}
+df_str <- 
+  left_join(df_str,
+          mobility_red,
+          by = c("date", "province"))
+
+rm(mobility,
+   mobility_red)
+```
+
+# Variable transformation
+
+## Variable dictionaries
+
+I do not use OPAL for this. According to the vardict file, #5 should be "Date of Birth", which we consider sensitive data and thus will not upload (see below).
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(SD03 = case_when(SD03 == "0" ~ "2",
+                          SD03 == "1" ~ "1",
+                          SD03 == "2" ~ "3"),
+         country_of_residence = factor("ES",
+                                       levels = "ES"),
+         migration = NA_integer_,
+         age_cat = case_when(EDAD < 18 ~ "below 18 years",
+                             EDAD > 17 & EDAD < 45 ~ "18-44",
+                             EDAD > 44 & EDAD < 65 ~ "45-64",
+                             EDAD > 64 & EDAD < 95 ~ "65-94",
+                             EDAD > 94 ~ "95 years or older",
+                             EDADV2 < 18 ~ "below 18 years",
+                             EDADV2 > 17 & EDADV2 < 45 ~ "18-44",
+                             EDADV2 > 44 & EDADV2 < 65 ~ "45-64",
+                             EDADV2 > 64 & EDADV2 < 95 ~ "65-94",
+                             EDADV2 > 94 ~ "95 years or older"),
+         employment_status = as.integer(1),
+         contract = NA_integer_,
+         employment_type = NA_integer_,
+         healthcare_worker = 1,
+         profession = case_when(TR14 == "1" ~ "4", # Check "14"
+                                TR14 == "2" ~ "4",
+                                TR14 == "3" ~ "4",
+                                TR14 == "4" ~ "4",
+                                TR14 == "5" ~ "4",
+                                TR14 == "6" ~ "4",
+                                TR14 == "7" ~ "4",
+                                TR14 == "8" ~ "4",
+                                TR14 == "9" ~ "4",
+                                TR14 == "10" ~ "4",
+                                TR14 == "11" ~ "4",
+                                TR14 == "12" ~ "4",
+                                TR14 == "13" ~ "4",
+                                TR14 == "14" ~ "4",
+                                TR14 == "15" ~ "5",
+                                TR14 == "16" ~ "4",
+                                TR14 == "17" ~ "4",
+                                TR14 == "18" ~ "14",
+                                TR14 == "19" ~ "11",
+                                TR14 == "20" ~ "10",
+                                TR14 == "21" ~ "12",
+                                TR14 == "22" ~ "12",
+                                TR14 == "23" ~ "12",
+                                TR14 == "24" ~ "14",
+                                TR14 == "25" ~ "4",
+                                TR14 == "26" ~ "4",
+                                TR14 == "27" ~ "14",
+                                TR14 == "28" ~ "14",
+                                TR14 == "29" ~ "14",
+                                TR14 == "30" ~ "14",
+                                TR14 == "31" ~ "4"),
+         education = case_when(SD04 == "0" ~ "4",
+                               SD04 == "1" ~ "1",
+                               SD04 == "2" ~ "2",
+                               SD04 >= "3" ~ "3"),
+         relationship_status = NA_integer_,
+         children = if_else(SD08 == "0",
+                            "2",
+                            SD08),
+         children_household = if_else(SD08 == "0",
+                                      "2",
+                                      SD08), #TODO: check w Pap
+         children_n = case_when(SD08a == "0" ~ "1",
+                                SD08a == "1" ~ "2",
+                                SD08a == "2" ~ "3",
+                                SD08a == "3" ~ "3",
+                                SD08a > "3" ~ "4"), #TODO: check w Pap
+         living_alone = if_else(SD07 == "0",
+                                "1",
+                                "2"),
+         household_size = case_when(SD07 == "1" ~ "1",
+                                    SD07 == "2" ~ "2",
+                                    SD07 == "3" ~ "3",
+                                    SD07 == "4" ~ "3",
+                                    SD07 > "4" ~ "4")
+         ) 
+```
+
+## Dates and times
+
+I will change the exact date and use the week number instead
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(
+    across(
+      .cols = c(`Fecha inicio`, `Fecha fin`),
+      .fns = ymd_hms
+    )
+  )
+```
+
+```{r}
+df_str %>% 
+  mutate(assessment_week = isoweek(`Fecha inicio`),
+         assessment_year = year(`Fecha inicio`)) %>% 
+  select(assessment_week,
+         assessment_year) %>% 
+  group_by(assessment_week,
+           assessment_year) %>% 
+  count() %>% 
+    arrange(assessment_year) # makes sense
+```
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(assessment_week = isoweek(`Fecha inicio`),
+         assessment_year = year(`Fecha inicio`))
+```
+
+```{r eval = FALSE}
+df_str %>% 
+  mutate(age_cat = case_when(EDAD < 18 ~ "below 18 years",
+                             EDAD > 17 & EDAD < 45 ~ "18-44",
+                             EDAD > 44 & EDAD < 65 ~ "45-64",
+                             EDAD > 64 & EDAD < 95 ~ "65-94",
+                             EDAD > 94 ~ "95 years or older",
+                             EDADV2 < 18 ~ "below 18 years",
+                             EDADV2 > 17 & EDADV2 < 45 ~ "18-44",
+                             EDADV2 > 44 & EDADV2 < 65 ~ "45-64",
+                             EDADV2 > 64 & EDADV2 < 95 ~ "65-94",
+                             EDADV2 > 94 ~ "95 years or older")) -> df_str # see above
+```
+
+## Other sensitive variables
+
+```{r}
+df_str %>% 
+  mutate(
+    across(
+      .cols = c(`Fecha inicio`,
+                `Fecha fin`,
+                SD01a,
+                EDAD,
+                EDADV2,
+                EDADRCH,
+                EDADRCHV2,
+                contains("tex"),
+                contains("esp") & !SD08new_esp, # Number of people under care
+                SP67,
+                SD11a,
+                SD11b,
+                date),
+      ~ NA_character_
+    )
+  ) -> df_str
+```  
+
+# Eliminate unnecesary variables
+
+Variables with 100% missing data
+
+```{r}
+miss_var_summary(df_str) %>% 
+  filter(pct_miss > 99.9) %>% 
+  select(variable) -> df_str_100_missing
+
+df_str <- 
+  df_str %>% 
+  select(!all_of(df_str_100_missing$variable))
+```
+
+Variables not included in the RESPOND WP2 codebook
+
+```{r}
+vv_respond_opal <- 
+  readxl::read_xlsx("data/vv_codebook_opal.xlsx",
+                    col_names = F)
+
+df_str %>% 
+  select(any_of(vv_respond_opal$...1)) # 119 / 130 variables already in the dataset
+
+vv_respond_opal %>% 
+  select(...1) %>% 
+  filter(!...1 %in% colnames(df_str)) #TODO: check w Pap
+```
+
+EDAD and EDAD_V2 have already been deleted. Suicidality variables ("IS") are not collected in Spain. RE61 does not exist (surprisingly). SD01a was removed. The only problem is SD08new_esp, where respondents specify how many people they had under their care (which I already fixed)
+
+## Reduced dataset
+
+```{r}
+df_str_red <- 
+  df_str %>% 
+  select(wave,
+         Identificador,
+         SD01,
+         any_of(vv_respond_opal$...1),
+         starts_with("ps_"), # TODO: remove if not working
+         CountryName:assessment_year)
+```
+
+# Recode NAs
+
+I will first get a description of missing values
+
+```{r}
+df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100) %>% 
+  data.frame
+```
+
+```{r}
+all_miss_wave1 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 1) %>% 
+  ungroup() %>% 
+  select(variable)
+
+all_miss_wave2 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 2) %>% 
+  ungroup() %>% 
+  select(variable)
+
+all_miss_wave3 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 3) %>% 
+  ungroup() %>% 
+  select(variable)
+
+df_str_red_chr <- 
+  df_str_red %>%
+  
+  # I do this first to make the code work
+  
+  mutate(
+    across(
+      .cols = everything(),
+      .fns = as.character
+    )
+  ) %>% 
+  
+  # I recode the system missing values first
+  
+  mutate(
+    across(
+      .cols = all_of(all_miss_wave1$variable),
+      .fns = ~if_else(wave=="1",
+                        "-991",
+                        .)
+    ),
+    across(
+      .cols = all_of(all_miss_wave2$variable),
+      .fns = ~if_else(wave=="2",
+                      "-991",
+                      .)
+    ),
+    across(
+      .cols = all_of(all_miss_wave3$variable),
+      .fns = ~if_else(wave=="3",
+                      "-991",
+                      .)
+    ),
+    
+    # And then the response missing values
+    
+    across(
+      .cols = everything(),
+      .fns = ~replace_na(., "-993")
+    )
+  )
+```
+
+```{r eval = FALSE}
+#FIXME: working on this so that I can easily use it with factors (I don't have chr in my dataset anymore)
+
+all_miss_wave1 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 1) %>% 
+  ungroup() %>% 
+  select(variable)
+
+all_miss_wave2 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 2) %>% 
+  ungroup() %>% 
+  select(variable)
+
+all_miss_wave3 <- 
+  df_str_red %>% 
+  group_by(wave) %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss == 100,
+         wave == 3) %>% 
+  ungroup() %>% 
+  select(variable)
+
+df_str_red_rec <- 
+  df_str_red %>% 
+  mutate( # I must first recode all variables into chr so that if_else works properly
+    across(
+      .cols = all_of(all_miss_wave1$variable),
+      .fns = as.character
+    ),
+    across(
+      .cols = all_of(all_miss_wave2$variable),
+      .fns = as.character
+    ),
+    across(
+      .cols = all_of(all_miss_wave3$variable),
+      .fns = as.character
+  )  
+  ) %>% 
+  mutate( # here, I recode all variables at once
+    across(
+      .cols = all_of(all_miss_wave1$variable),
+      .fns = ~if_else(wave==1,
+                      "-991",
+                      .)
+    ),
+    across(
+      .cols = all_of(all_miss_wave2$variable),
+      .fns = ~if_else(wave==2,
+                      "-991",
+                      .)
+    ),
+    across(
+      .cols = all_of(all_miss_wave3$variable),
+      .fns = ~if_else(wave==3,
+                      "-991",
+                      .)
+    ),
+    across(
+      .cols = where(is.factor),
+      .fns = ~fct_recode(.,
+                        "-993" = NA_character_)
+    ),
+    across(
+    across(
+      .cols = where(is.character),
+      .fns = ~replace_na(., "-993")
+    ),
+      .cols = where(is.numeric),
+      .fns = ~ replace_na(., -993)
+    )
+  )
+
+rm(all_miss_wave1,
+   all_miss_wave2,
+   all_miss_wave3)
+```
+
+# Set variable class
+
+```{r}
+df_str_red <- 
+  df_str_red_chr %>% 
+  mutate(
+    across(
+      .cols = c(MP22,
+                SD07,
+                SD08a,
+                TR16,
+                TR17),
+      .fns = ~ str_extract(., ".[:digit:]*") %>% as.numeric
+    ),
+    across(
+      .cols = c(starts_with(c("AD",
+                              "GAD",
+                              "PCPTSD",
+                              "PHQ")),
+                RE57:RE63),
+      .fns = as.numeric),
+    across(
+      .cols = CountryName:quartile_3,
+      .fns = as.numeric
+    )
+    ) %>% 
+  mutate(
+    across(
+      .cols = where(is.character) & !Identificador,
+      .fns = as.factor
+    )
+  )
+
+miss_var_summary(df_str_red) %>% 
+  filter(pct_miss > 0) %>% 
+  select(variable) -> for_rec # See that new NAs pop up now
+
+df_str_red <- 
+  df_str_red %>% 
+  mutate(
+    across(
+      .cols = all_of(for_rec$variable),
+      .fns = ~replace_na(., -991)
+    )
+  )
+```
+
+# Set variable labels
+
+```{r eval = FALSE}
+# test OK
+
+lab_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  drop_na() %>% 
+  filter(short_name %in% colnames(df_str_red))
+
+test <- 
+  df_str_red_anonymised %>% 
+  select(all_of(lab_t0$short_name)) %>% 
+  sjlabelled::set_label(., lab_t0$item)
+
+str(test)
+
+# mutate
+
+test2 <- 
+  df_str_red_anonymised %>% 
+  mutate(
+    across(
+      .cols = all_of(lab_t0$short_name),
+      .fns = ~sjlabelled::set_label(.,lab_t0$item)
+    )
+  )
+
+str(test2) #FIXME: to get labels in the future
+```
+
+Intento crear un vector que me permita hacer esto
+
+```{r eval = FALSE}
+labelled::var_label(iris) <- list(Petal.Length = "Length of petal", Petal.Width = "Width of Petal")
+labelled::var_label(iris) <- list(Petal.Length = 'Length of petal', Petal.Width = 'Width of Petal')
+
+iris_tibble <- as_tibble(iris)
+
+labelled::var_label(iris_tibble) <- list(Petal.Length = 'Length of petal', Petal.Width = 'Width of Petal')
+```
+
+```{r eval = FALSE}
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  drop_na() %>% 
+  mutate(
+    item = paste0("'", item,"'"),
+    combi = paste0(short_name, " = ",item)
+  ) %>% 
+  select(combi)
+
+labs_t0
+
+# 2
+
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  drop_na() %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t1 <- 
+  codebook_t1 %>% 
+  select(short_name, item) %>% 
+  drop_na() %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t2 <- 
+  codebook_t2 %>% 
+  select(short_name, item) %>% 
+  drop_na() %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs <- 
+  c(labs_t0,
+    labs_t1,
+    labs_t2)
+
+# 3
+
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(df_str_red)) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labelled::var_label(df_str_red) <- labs_t0 #WORKS
+
+# EXPORT OP 1
+
+labs_t1 <- 
+  codebook_t1 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(df_str_red)) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+labs_t2 <- 
+  codebook_t2 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(df_str_red)) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labelled::var_label(df_str_red) <- labs_t1
+labelled::var_label(df_str_red) <- labs_t2
+```
+
+Solución: necesito tres vectores con  los colnames específicos de cada ola
+
+```{r eval = FALSE}
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t0)) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t1 <- 
+  codebook_t1 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t1) & 
+           !short_name %in% colnames(c(raw_t0, raw_t2))) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t2 <- 
+  codebook_t2 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t2) & 
+           !short_name %in% colnames(c(raw_t0, raw_t1))) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t1_only <- labs_t1 %>% filter(!labs_t1 %in% labs_t0)
+
+```
+
+```{r eval = FALSE}
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t0))
+
+labs_t1 <- 
+  codebook_t1 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t1) & 
+           !short_name %in% colnames())
+
+labs_t2 <- 
+  codebook_t2 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% colnames(raw_t2) & 
+           !short_name %in% colnames(c(raw_t1, raw_t2)))
+```
+
+```{r}
+# Step 1. Get colnames
+
+raw_t0 %>% 
+  select(ends_with(colnames(df_str_red))) %>% 
+  colnames() -> t0_uniq
+
+raw_t1 %>% 
+  select(matches(colnames(df_str_red))) %>% 
+  select(!matches(t0_uniq)) %>% 
+  colnames() -> t1_uniq
+
+raw_t2 %>% 
+  select(matches(colnames(df_str_red))) %>% 
+  select(!matches(t0_uniq)) %>% 
+  select(!matches(t1_uniq)) %>% 
+  rename_with(.,
+              ~ str_replace(.,
+                    "[:alnum:]+3_",
+                    "")) %>% 
+  colnames() -> t2_uniq
+
+df_str_red %>% 
+  select(!matches(t0_uniq)) %>% 
+  select(!matches(t1_uniq)) %>% 
+  select(!matches(t2_uniq)) %>% 
+  colnames() -> new
+
+# Tengo 130 variables (en df_str_red hay 206)
+
+labs_t0 <- 
+  codebook_t0 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% t0_uniq) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t1 <- 
+  codebook_t1 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% t1_uniq) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_t2 <- 
+  codebook_t2 %>% 
+  select(short_name, item) %>% 
+  filter(short_name %in% t2_uniq) %>% 
+  with(.,
+       split(item,
+             factor(short_name, levels = unique(short_name))))
+
+labs_new <- 
+  new %>% 
+  as_tibble() %>% 
+  mutate(short_name = value,
+         item = "unknown") %>% 
+  select(!value) %>% 
+  with(.,
+     split(item,
+           factor(short_name, levels = unique(short_name))))
+
+labs <- c(labs_t0, labs_t1, labs_t2, labs_new)
+
+# labelled::var_label(df_str_red) <- labs_new
+# labelled::var_label(df_str_red) <- labs_t2
+# labelled::var_label(df_str_red) <- labs_t1
+# labelled::var_label(df_str_red) <- labs_t0 
+
+labelled::var_label(df_str_red) <- labs
+
+labelled::var_label(df_str_red) #CHECK
+```
+
+# Create hash ID
+
+The WP2 handbook for harmonisation reads that a unique identifier (random integer) should be assigned to each participant. To secure that process, I will first create a hashed ID, remove the original ID, and then transform that new ID in a random integer.
+
+```{r}
+library(openssl)
+
+df_str_red %>% 
+  mutate(hashed_id = md5(Identificador)) -> df_str_red
+
+df_str_red_anonymised <- 
+  df_str_red %>% 
+  select(!Identificador) %>% 
+  relocate(hashed_id)
+```
+
+# Clean variable names
+
+```{r}
+df_str_red_anonymised %>% 
+  janitor::clean_names(.) -> df_str_red_anonymised
+```
+
+# Save Rdata
+
+```{r eval = FALSE}
+saveRDS(df_str_red_anonymised, "data/heroes_wp2_anonymised.rds")
+df_rds <- readRDS("data/heroes_wp2_anonymised.rds")
+```
+
+```{r eval = FALSE}
+haven::write_sav(df_str_red_anonymised, "test_3.sav")
+```
+
+# Save .csv
+
+```{r eval = FALSE}
+write_csv(df_str_red_anonymised, "heroes_wp2_anonymised.csv")
+```
+
