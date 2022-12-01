@@ -22,14 +22,6 @@ library(naniar)
 
 Here, I prepare the full HEROES dataset (3 assessment waves) to be uploaded to OPAL, as part of RESPOND WP2 IPD meta-analysis. I will follow the [OPAL handbook for WP2](https://drzmainz.sharepoint.com/:w:/r/sites/obiba-wp2/Shared%20Documents/harmonisation/data%20upload%20preparation/handbook_datauploadprep.docx?d=w15b8e9fe38734104a507dcedc3af3d49&csf=1&web=1&e=6Hu6Lm)
 
-1. Merge all the assessment waves in a dataset with a number of rows equal to wavesBYparticipants. 
-2. Create as many new variables as needed, as per the OPAL handbook for WP2.
-3. Transform variables that require transformation outside the OBIBA environment (sensitive data).
-4. Remove all columns that are not included in the RESPOND WP2 codebook. 
-5. Recode missing data
-5. Create a new hashed ID and remove the old one. 
-6. Export a .csv file to be uploaded to OPAL.
-
 ## Import data
 
 ```{r collapse=TRUE}
@@ -64,9 +56,7 @@ headers <- raw_t2[1,]
 colnames(raw_t2) <- headers
 raw_t2 <- raw_t2[-1,]
 remove(headers)
-```
 
-```{r}
 codebook_t0 <- readxl::read_xlsx("data/heroes_codebook.xlsx",
                                  sheet = 1) %>% 
   janitor::clean_names()
@@ -77,7 +67,6 @@ codebook_t2 <- readxl::read_xlsx("data/heroes_codebook.xlsx",
                                  sheet = 3) %>% 
   janitor::clean_names()
 ```
-
 
 # Include all individual participants across waves
 
@@ -101,44 +90,24 @@ raw_t2 <-
 Before I merge the three datasets into one, I need to remove weird prefixes from wave 3 variables
 
 ```{r}
-colnames(raw_t2)
-```
-
-```{r}
 raw_t2 <- 
   raw_t2 %>% 
   rename(`Fecha inicio` = "Fecha_inicio",
          `Fecha fin` = "Fecha_fin")
-```
 
-```{r}
 raw_t2_colnames <- colnames(raw_t2)
-```
 
-```{r}
 raw_t2_colnames_edited <- 
   str_replace(raw_t2_colnames,
             "[:alnum:]+3",
             "")
-```
 
-```{r}
 raw_t2_colnames_edited <- 
   str_replace(raw_t2_colnames_edited,
               "^_", "")
-```
 
-```{r eval = FALSE}
-ds_colnames <- bind_cols(raw_t2_colnames,
-                         raw_t2_colnames_edited)
-rm(ds_colnames)
-```
-
-```{r}
 colnames(raw_t2) <- raw_t2_colnames_edited
-```
 
-```{r}
 rm(raw_t2_colnames,
    raw_t2_colnames_edited)
 ```
@@ -180,7 +149,8 @@ RA53b	Checks	In the past three months, have you received any of the following su
 		Long-distance psychological support (e.g., by phone, online, by video call or video conference, by chat or through an application)	0:00
 		
 
-```{r eval = TRUE}
+```{r}
+
 #TODO: eval FALSE if not working 
 
 raw_t0 %>% 
@@ -261,6 +231,37 @@ raw_t2 <-
          )
 ```
 
+### MP25d
+
+Item MP25d is impossible to harmonise across waves. 
+
+At wave 1, it reads:
+
+Since the beginning of the pandemic, have you experienced any problems with family members of patients with COVID-19?	0: No, no problems
+	1: Yes, one problem
+	2: Yes, some problems
+	3: Yes, many problems 
+
+At waves 2 and 3, it reads:
+
+In the past three months, due to your job, have you experienced any conflictive situations (physical or verbal aggression, accusations of malpractice, etc.) with family members of patients with COVID-19?	0: Not at all
+	1: Less than once a month
+	2: Monthly
+	3: Weekly
+	4: Daily or almost daily
+
+I create two different variables so that we can keep both in further analysis. MP25d stays as it is for wave one, but MP25d_2and3 is created for waves 2 and 3.
+
+```{r}
+raw_t1<- 
+  raw_t1 %>% 
+  rename(MP25d_2and3 = MP25d)
+
+raw_t2 <- 
+  raw_t2 %>% 
+  rename(MP25d_2and3 = MP25d)
+```
+
 ### Bind rows
 
 ```{r}
@@ -271,10 +272,9 @@ df <-
           .id = "wave")
 ```
 
-
 ## Remove observations
 
-I delete ~ 200 observations that are tests or simply not valid 
+I delete ~ 200 observations that I know are not valid
 
 ```{r}
 df <- 
@@ -295,31 +295,21 @@ df %>%
   select(Identificador) %>% 
   group_by(Identificador) %>% 
   summarise(n = n()) -> unique_ids
-```
 
-```{r}
 unique_ids <- 
   unique_ids %>% 
   select(Identificador)
-```
 
-Now I need to go again to the raw datasets
-
-```{r}
 raw_t0_complete <- 
   right_join(raw_t0,
              unique_ids,
              by = "Identificador")
-```
 
-```{r}
 raw_t1_complete <- 
   right_join(raw_t1,
              unique_ids,
              by = "Identificador")
-```
 
-```{r}
 raw_t2_complete <- 
   right_join(raw_t2,
              unique_ids,
@@ -340,30 +330,25 @@ df <-
 
 ## Lockdown stringency index
 
-The file has got data from several countries. I only want to import the Spanish data.
+All variables added, as per latest version of RESPOND handbook (16 November 2022).
 
 ```{r}
 stringency_index <- 
   readr::read_csv("https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/OxCGRT_nat_latest.csv") %>% 
   filter(CountryCode == "ESP")
-```
 
-```{r}
 stringency_index <- 
   stringency_index %>% 
   mutate(date = ymd(Date)) %>% 
   select(!Date)
-```
 
-```{r}
-df %>% 
-  mutate(date = as_date(`Fecha inicio`)) -> df
-```
+df <- df %>% 
+  mutate(date = as_date(`Fecha inicio`))
 
-```{r}
 df_str <- left_join(df,
                     stringency_index,
                     by = "date")
+
 rm(stringency_index)
 ```
 
@@ -372,7 +357,7 @@ rm(stringency_index)
 ```{r}
 income <- 
   tibble(
-  year = as.double(c("2018", "2019", "2020")),
+  year = as.double(c("2018", "2019", "2020")), # Only 2020 applies
   quintile_1 = c(8549, 8847, 9449),
   quintile_2 = c(12647,12997,13840),
   quintile_3 = c(17064,17422,18526),
@@ -381,21 +366,16 @@ income <-
   quartile_2 = c(14785,15015,16043),
   quartile_3 = c(21656,22024,23295)
 )
-```
 
-I actually need only the 2020 information, because there is no previous data. I create the income dataset in case it can get expanded soon.
-
-```{r}
 df_str <- 
   df_str %>% 
   mutate(year = year(date))
-```
 
-```{r}
 df_str <- 
   left_join(df_str,
-          income,
-          by = "year")
+            income,
+            by = "year")
+
 rm(income)
 ```
 
@@ -596,6 +576,20 @@ rm(mobility,
    mobility_red)
 ```
 
+## UN country/region codes
+
+Based on updated handbook (16 November 2022)
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(
+    m49_region = "150" %>% as_factor,
+    m49_subregion = "039" %>% as_factor
+  )
+```
+
+
 # Variable transformation
 
 ## Variable dictionaries
@@ -625,7 +619,7 @@ df_str <-
          contract = NA_integer_,
          employment_type = NA_integer_,
          healthcare_worker = 1,
-         profession = case_when(TR14 == "1" ~ "4", # Check "14"
+         profession = case_when(TR14 == "1" ~ "4",
                                 TR14 == "2" ~ "4",
                                 TR14 == "3" ~ "4",
                                 TR14 == "4" ~ "4",
@@ -666,22 +660,146 @@ df_str <-
                             SD08),
          children_household = if_else(SD08 == "0",
                                       "2",
-                                      SD08), #TODO: check w Pap
+                                      SD08),
          children_n = case_when(SD08a == "0" ~ "1",
                                 SD08a == "1" ~ "2",
                                 SD08a == "2" ~ "3",
                                 SD08a == "3" ~ "3",
                                 SD08a > "3" ~ "4"), #TODO: check w Pap
-         living_alone = if_else(SD07 == "0",
+         living_alone = if_else(SD07 == "1",
                                 "1",
-                                "2"),
-         household_size = case_when(SD07 == "1" ~ "1",
+                                "2"), # recoded before it was 0
+         household_size = case_when(SD07 == "01" ~ "1",
+                                    SD07 == "02" ~ "2",
+                                    SD07 == "04" ~ "4",
+                                    SD07 == "1" ~ "1",
                                     SD07 == "2" ~ "2",
                                     SD07 == "3" ~ "3",
                                     SD07 == "4" ~ "3",
-                                    SD07 > "4" ~ "4")
+                                    SD07 > "4" & SD07 < 10 ~ "4",
+                                    SD07 > "9" ~ NA_character_)
          ) 
 ```
+
+## Additional recodings
+
+### Profession - HCWs only
+
+Since our dataset includes HCWs only, I include an additional categorisation of professions to better capture the nature of our data.
+
+```{r job hcws}
+df_str <- 
+  df_str %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "farm|FARM|Farm"),
+                        "25")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "bio|Bio|BIO|bió|Bió|BIÓ"),
+                        "26")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "administr|Administr|ADMINISTR"),
+                        "18")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Enfermer|enfermer|ENFERMER"),
+                        "2")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Matr|matr|MATR"),
+                        "13")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "Psic|psic|PSIC"),
+                        "4")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "elador|ELADOR"),
+                        "19")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "OGOP|ogop"),
+                        "14")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "avand|Barb|barb|encer"),
+                        "21")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "isiot|ISIOT"),
+                        "8")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "rabaj|RABAJ"),
+                        "5")) %>%   
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "ASTREAD|astread"),
+                        "31")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "edic|édic|EDIC|ÉDIC"),
+                        "1")) %>%
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "siq"),
+                        "1")) %>%  
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "onito|ONITO"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "duca|DUCA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "uida|UIDA"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "residencia|RESIDENCIA|Residencia|
+                                   residencial|Residencial|RESIDENCIAL"),
+                        "30")) %>% 
+  mutate(TR14 = replace(TR14,
+                        str_detect(TR14tex,
+                                   "faisem|FAISEM|Faisem"),
+                        "30"))
+
+df_str <- 
+  df_str %>% 
+  mutate(
+    profession_hcw = fct_collapse(TR14,
+                                  "physician" = "1",
+                                  "nurse" = c("2","13"),
+                                  "health technician" = c("3","6","7"),
+                                  "ancillary worker" = c("18":"23"),
+                                  "other HCW" = c("4","5","8","9","10","11",
+                                                "12","14","15","25","26","31"),
+                                  "socio-community" = c("27","28", "29","30"),
+                                  "other" = c("16","17","24")
+                           
+    )
+  )
+```
+
+### Outliers
+
+```{r}
+df_str <- 
+  df_str %>% 
+  mutate(TR16 = as.numeric(TR16),
+         TR16 = if_else(TR16 > 7,
+                        NA_real_,
+                        TR16),
+         TR17 = as.numeric(TR17) %>% round(0),
+         TR17 = if_else(TR17 > 24,
+                        NA_real_,
+                        TR17))
+```
+
 
 ## Dates and times
 
@@ -694,11 +812,13 @@ df_str <-
     across(
       .cols = c(`Fecha inicio`, `Fecha fin`),
       .fns = ymd_hms
-    )
+    ),
+    assessment_week = isoweek(`Fecha inicio`),
+    assessment_year = year(`Fecha inicio`)
   )
 ```
 
-```{r}
+```{r eval = FALSE}
 df_str %>% 
   mutate(assessment_week = isoweek(`Fecha inicio`),
          assessment_year = year(`Fecha inicio`)) %>% 
@@ -710,31 +830,11 @@ df_str %>%
     arrange(assessment_year) # makes sense
 ```
 
-```{r}
-df_str <- 
-  df_str %>% 
-  mutate(assessment_week = isoweek(`Fecha inicio`),
-         assessment_year = year(`Fecha inicio`))
-```
-
-```{r eval = FALSE}
-df_str %>% 
-  mutate(age_cat = case_when(EDAD < 18 ~ "below 18 years",
-                             EDAD > 17 & EDAD < 45 ~ "18-44",
-                             EDAD > 44 & EDAD < 65 ~ "45-64",
-                             EDAD > 64 & EDAD < 95 ~ "65-94",
-                             EDAD > 94 ~ "95 years or older",
-                             EDADV2 < 18 ~ "below 18 years",
-                             EDADV2 > 17 & EDADV2 < 45 ~ "18-44",
-                             EDADV2 > 44 & EDADV2 < 65 ~ "45-64",
-                             EDADV2 > 64 & EDADV2 < 95 ~ "65-94",
-                             EDADV2 > 94 ~ "95 years or older")) -> df_str # see above
-```
-
 ## Other sensitive variables
 
 ```{r}
-df_str %>% 
+df_str <- 
+  df_str %>% 
   mutate(
     across(
       .cols = c(`Fecha inicio`,
@@ -752,7 +852,7 @@ df_str %>%
                 date),
       ~ NA_character_
     )
-  ) -> df_str
+  )
 ```  
 
 # Eliminate unnecesary variables
@@ -772,8 +872,24 @@ df_str <-
 Variables not included in the RESPOND WP2 codebook
 
 ```{r}
+# New version (1.12.22)
+
 vv_respond_opal <- 
-  readxl::read_xlsx("data/vv_codebook_opal.xlsx",
+  readxl::read_xlsx("heroes_respond_varlist.xlsx")
+
+df_str_red <- 
+  df_str %>% 
+  select(wave,
+         Identificador,
+         any_of(vv_respond_opal$variable),
+         CountryName:assessment_year)
+```
+
+
+```{r eval = FALSE}
+vv_respond_opal <- 
+  readxl::read_xlsx("data/vv_codebook_opal.xlsx", 
+                    #TODO: read from variable list instead when ready
                     col_names = F)
 
 df_str %>% 
@@ -781,29 +897,36 @@ df_str %>%
 
 vv_respond_opal %>% 
   select(...1) %>% 
-  filter(!...1 %in% colnames(df_str)) #TODO: check w Pap
+  filter(!...1 %in% colnames(df_str))
+
+#FIXME: remove if works
 ```
 
 EDAD and EDAD_V2 have already been deleted. Suicidality variables ("IS") are not collected in Spain. RE61 does not exist (surprisingly). SD01a was removed. The only problem is SD08new_esp, where respondents specify how many people they had under their care (which I already fixed)
 
-## Reduced dataset
-
-```{r}
+```{r eval = FALSE}
 df_str_red <- 
   df_str %>% 
   select(wave,
          Identificador,
+         profession_hcw,
          SD01,
+         EP31,
+         
+         MP25a, # TODO: update var list and remove
+         MP19, #TODO: update var list and remove
          any_of(vv_respond_opal$...1),
          starts_with("ps_"), # TODO: remove if not working
          CountryName:assessment_year)
+
+#FIXME: remove if works
 ```
 
 # Recode NAs
 
 I will first get a description of missing values
 
-```{r}
+```{r eval = FALSE}
 df_str_red %>% 
   group_by(wave) %>% 
   miss_var_summary() %>% 
@@ -811,7 +934,20 @@ df_str_red %>%
   data.frame
 ```
 
+Two variables can be recoded using -992 ("I prefer not to respond")
+
 ```{r}
+df_str_red %>% 
+  mutate(EP32 = fct_recode(EP32,
+                           "-992" = "3"),
+         EP32a = fct_recode(EP32a,
+                            "-992" = "4")) %>% 
+  select(starts_with("EP32"))
+```
+
+
+```{r}
+#FIXME: Set to FALSE while I work on the stressors
 all_miss_wave1 <- 
   df_str_red %>% 
   group_by(wave) %>% 
