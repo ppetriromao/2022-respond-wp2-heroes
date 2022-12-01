@@ -12,7 +12,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 
 require(pacman)
 p_load(tidyverse,
@@ -31,7 +31,7 @@ currently "prefer not to issues" are not recoded as -992. therefore we are recod
 
 ds <- ds %>%	        
         
-  mutate(sd03 = recode(sd03,"2"= NA_character_),	        
+  mutate(sd03 = recode(sd03,"3"= NA_character_),	        
         
          # sd05 = recode(sd05, "6" = NA_character_),	        
         
@@ -77,7 +77,7 @@ ds <- ds %>%
 
 ```
 
-# separating datset
+# separating dataset
 
 ```{r waves}
 # dataset wave 1
@@ -187,6 +187,7 @@ df1 <-
          mp25,
          mp24,
          starts_with(c("phq", "ad"))) 
+
 ```
 
 At this stage, I only recode NAs, so that we can look at the actual distribution of stressors
@@ -205,15 +206,15 @@ df1 <-
     ep32 = fct_recode(ep32,
                       NULL = "2",
                       NULL = "3"),
-    # mp24 = as.numeric(mp24),
+    mp24 = as.numeric(mp24),
     mp18 = fct_recode(mp18,
                       NULL = "2"),
        mp19 = fct_recode(mp19,
                       NULL = "4")# added by papoula
    )
 
-df1 <- 
-  df1 %>% 
+df1 <-
+  df1 %>%
   mutate(
     ghq_total = select(., c(ad34:ad45)) %>% rowSums(),
     phq_total = select(., c(phq68:phq76)) %>% rowSums()
@@ -223,7 +224,7 @@ df1 <-
 ## Correlation matrix
 
 ```{r robercorr}
-df1 %>% 
+df1 %>%
   mutate(
     across(
       where(is.factor),
@@ -233,10 +234,10 @@ df1 %>%
       where(is.character),
       as.numeric
     )
-  ) %>% 
+  ) %>%
   select(!c(hashed_id,
             phq68:ad45)
-  ) %>% 
+  ) %>%
   psych::cor.plot(.)
 ```
 
@@ -245,9 +246,9 @@ Linear models
 ```{r robertlinear}
 # GHQ12
 
-df1 %>% 
+df1 %>%
   select(!c(hashed_id,
-            phq68:ad45)) %>% 
+            phq68:ad45)) %>%
   mutate(
     across(
       c(tr16, tr17, mp25c, mp25d, mp25e, mp21, mp23, mp22),
@@ -257,14 +258,14 @@ df1 %>%
       where(is.character),
       as.numeric
     )
-  ) %>% 
+  ) %>%
   map(~ lm(ghq_total ~ .x, df1) %>% summary())
 
 # PHQ-9
 
-df1 %>% 
+df1 %>%
   select(!c(hashed_id,
-            phq68:ad45)) %>% 
+            phq68:ad45)) %>%
   mutate(
     across(
       c(tr16, tr17, mp25c, mp25d, mp25e, mp21, mp23, mp22),
@@ -274,7 +275,7 @@ df1 %>%
       where(is.character),
       as.numeric
     )
-  ) %>% 
+  ) %>%
   map(~ lm(ghq_total ~ .x, df1) %>% summary())
 
 
@@ -464,10 +465,19 @@ ds1 <- ds1 %>%
     ec_8 = mp25a,
     ec_9 = mp24
       )
+
+
+# wave 2
+
+# wave 3
+
+
+
+
 ```
 
 
-# decriptives
+# First look: decriptives
 
 RMT general comment:
 Since we are not sure about anything,
@@ -525,6 +535,21 @@ ggplot2::ggplot(data=ds,aes(x = factor(wave),
 ```
 
 
+
+
+# Analyses: wave 1
+
+We calculate SR scores based on mental health exposure. 
+In the Dynacore studies we base this of GHQ. As we want to know mental health problems and not necessarily symptoms.
+However, in RESPOND WP4 we use PHQ & GAd7 as the basis of the SR score, as the sample is highly distressed. This results in a good SR measure. 
+Therefore we here compare an SR score based on GHQ and one on PHQ. 
+
+*the results indicate that more investment should be put in the definition of stressors, as there is virtually no different pattern with phq*
+
+Questions:
+
+    - should we impute data in ghq/phq
+    - should we impute data in E scores
 
 ## descriptives by wave 1 only 
 
@@ -617,9 +642,6 @@ ds1 %>%
   gtsummary::tbl_summary(.)
 ```
 
-```{r}
-
-```
 
 
 ```{r robfreq}
@@ -640,19 +662,7 @@ ds1 %>%
 ```
 
 
-# wave 1
-
-We calculate SR scores based on mental health exposure. 
-In the Dynacore studies we base this of GHQ. As we want to know mental health problems and not necessarily symptoms.
-However, in RESPOND WP4 we use PHQ & GAd7 as the basis of the SR score, as the sample is highly distressed. This results in a good SR measure. 
-Therefore we here compare an SR score based on GHQ and one on PHQ. 
-
-*the results indicate that more investment should be put in the definition of stressors, as there is virtually no different pattern with phq*
-
-Questions:
-
-    - should we impute data in ghq/phq
-    - should we impute data in E scores
+## separating samples, correlations
 
 ```{r wave-1}
 
@@ -681,7 +691,7 @@ psych::pairs.panels(ds1[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )],
              main = "all wave 1"
              )
 
-
+# subset Madrid sample
 ds1m <- ds1 %>% 
   filter(nuts_id == "ES300") 
 
@@ -694,6 +704,9 @@ psych::pairs.panels(ds1m[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )],
              ellipses = TRUE, # show correlation ellipses
              main = "madrid wave 1"
              )
+
+
+# subset based on 66% who experience the most healthcare stressors
 
 ds1top <- ds1 %>%                                     
   arrange(desc(ehc)) %>%  
@@ -709,11 +722,24 @@ psych::pairs.panels(ds1top[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )],
              main = "wave 1 top"
              )
 
+# subset on probably depressed
+
+ds1dep <- ds1 %>%                                     
+  filter(phq > 9)
+
+
+psych::pairs.panels(ds1dep[c("ehc", "ec", "E", "ehc_raw", "ghq", "phq" )], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "wave 1 top"
+             )
+
+
 ```
-## sr scores, ghq, pqhq
-Unfortunately, the SR score and GHQ are basically the same. 
 
-
+### calc SR: wave 1 all 
 
 ```{r sr_score_plot1}
 
@@ -833,12 +859,7 @@ psych::pairs.panels(ds1[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "
 
 ```
 
-## wave 1 madrid
-
-### sr scores, ghq, pqhq
-Unfortunately, the SR score and GHQ are basically the same. 
-
-
+### calc SR: wave 1 madrid
 
 ```{r sr_score_plotmadrid}
 
@@ -958,12 +979,7 @@ psych::pairs.panels(ds1m[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", 
 
 ```
 
-## wave 1 top 66%
-
-### sr scores, ghq, pqhq
-Unfortunately, the SR score and GHQ are basically the same. 
-
-
+### calc SR: wave 1 top 66% E
 
 ```{r sr_score_plottop}
 
@@ -1083,186 +1099,647 @@ psych::pairs.panels(ds1top[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq"
 
 ```
 
+### calc SR: wave 1 probably depressed
 
 
-## sr scores wave 3 ghq, phq, phqads
 
-```{r sr-wave3}
 
-# # GHQ SR score -------------------------------------------------------------
-# ## random slopes and intercepts
-# 
-# EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-# EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
-# 
-# 
-# ### compare model fits
-# anova(EP,EP_poly,test="Chisq")
-# 
-# 
-# ### plot differ EP lines
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(method = "lm") +
-#   ggtitle("Linear EP line GHQ")
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(ghq))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-#     ggtitle("quadratic E-P line GHQ")
-# 
-# 
-# ## calc linear SR score
-# intercept = summary(EP)$coefficients[1]
-# E_slope = summary(EP)$coefficients[2]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ### calculate predicted E based on this formula
-# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
-# 
-# ds3$SR_ghq= scale(scale(ds3$ghq) - ds3$P_pred)
-# ds3$RES_ghq = -(ds3$SR_ghq)
-# 
-# 
-# ## poly SR score
-# intercept_poly = summary(EP_poly)$coefficients[1]
-# E_slope_poly = summary(EP_poly)$coefficients[2]
-# E_slope2_poly = summary(EP_poly)$coefficients[3]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ## #calculate predicted E based on this formula
-# 
-# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
-# 
-# 
-# ds3$SR_poly_ghq = scale(scale(ds3$ghq) -ds3$P_pred_poly)
-# ds3$RES_poly_ghq <- -(ds3$SR_poly_ghq)
-# 
-# # phq SR score------------------------------------------------------
-# ## random slopes and intercepts
-# 
-# EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-# EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
-# 
-# 
-# ### compare model fits
-# anova(EP,EP_poly,test="Chisq")
-# 
-# 
-# ### plot differ EP lines
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(method = "lm") +
-#   ggtitle("Linear EP line phq")
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phq))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-#     ggtitle("quadratic E-P line phq")
-# 
-# 
-# ## calc linear SR score
-# intercept = summary(EP)$coefficients[1]
-# E_slope = summary(EP)$coefficients[2]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ### calculate predicted E based on this formula
-# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
-# 
-# ds3$SR_phq= scale(scale(ds3$phq) - ds3$P_pred)
-# ds3$RES_phq = -(ds3$SR_phq)
-# 
-# 
-# ## poly SR score
-# intercept_poly = summary(EP_poly)$coefficients[1]
-# E_slope_poly = summary(EP_poly)$coefficients[2]
-# E_slope2_poly = summary(EP_poly)$coefficients[3]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ## #calculate predicted E based on this formula
-# 
-# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
-# 
-# 
-# ds3$SR_poly_phq = scale(scale(ds3$phq) -ds3$P_pred_poly)
-# ds3$RES_poly_phq <- -(ds3$SR_poly_phq)
-# 
-# # phqads SR score ---------------------------------------------------------
-# ## random slopes and intercepts
-# 
-# EP      <- lm(scale(phqads) ~ poly(scale(E),1,raw = TRUE),data=ds3)  
-# EP_poly <- lm(scale(phqads) ~ poly(scale(E),2,raw = TRUE),data=ds3)  
-# 
-# 
-# ### compare model fits
-# anova(EP,EP_poly,test="Chisq")
-# 
-# 
-# ### plot differ EP lines
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(method = "lm") +
-#   ggtitle("Linear EP line phqads")
-# 
-# plot <- ggplot(ds3, aes(x = scale(E), y = scale(phqads))) +
-#   geom_point() +
-#   labs(x="E", y="P") +
-#   geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
-#     ggtitle("quadratic E-P line phqads")
-# 
-# 
-# ## calc linear SR score
-# intercept = summary(EP)$coefficients[1]
-# E_slope = summary(EP)$coefficients[2]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ### calculate predicted E based on this formula
-# ds3$P_pred = (intercept + scale(ds3$E)*E_slope)
-# 
-# ds3$SR_phqads= scale(scale(ds3$phqads) - ds3$P_pred)
-# ds3$RES_phqads = -(ds3$SR_phqads)
-# 
-# 
-# ## poly SR score
-# intercept_poly = summary(EP_poly)$coefficients[1]
-# E_slope_poly = summary(EP_poly)$coefficients[2]
-# E_slope2_poly = summary(EP_poly)$coefficients[3]
-# 
-# ### predicted E wwould be predE = slope*actualE + intercept
-# ## #calculate predicted E based on this formula
-# 
-# ds3$P_pred_poly = (intercept_poly + scale(ds3$E)*E_slope_poly + (scale(ds3$E)^2)*E_slope2_poly)
-# 
-# 
-# ds3$SR_poly_phqads = scale(scale(ds3$phqads) -ds3$P_pred_poly)
-# ds3$RES_poly_phqads <- -(ds3$SR_poly_phqads)
-# 
-# 
-# # correlations -----------------------------------------------------
-# 
-# psych::pairs.panels(ds3[c("RES_phqads", "RES_poly_phqads","RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq", "phqads")], 
-#              method = "pearson", # correlation method
-#              hist.col = "#00AFBB",
-#              density = TRUE,  # show density plots
-#              ellipses = TRUE, # show correlation ellipses
-#              main = "over all timepoints"
-#              )
+```{r sr_score_plottop}
+
+# GHQ SR score
+## random slopes and intercepts
+
+EP      <- lm(scale(ghq) ~ poly(scale(E),1,raw = TRUE),data=ds1dep)  
+EP_poly <- lm(scale(ghq) ~ poly(scale(E),2,raw = TRUE),data=ds1dep)  
+
+
+### compare model fits
+anova(EP,EP_poly,test="Chisq")
+
+
+### plot differ EP lines
+
+plot <- ggplot(ds1dep, aes(x = scale(E), y = scale(ghq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear EP line GHQ")
+
+plot <- ggplot(ds1dep, aes(x = scale(E), y = scale(ghq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line GHQ")
+
+
+## calc linear SR score
+intercept = summary(EP)$coefficients[1]
+E_slope = summary(EP)$coefficients[2]
+
+### predicted E wwould be predE = slope*actualE + intercept
+### calculate predicted E based on this formula
+ds1dep$P_pred = (intercept + scale(ds1dep$E)*E_slope)
+
+ds1dep$SR_ghq= scale(scale(ds1dep$ghq) - ds1dep$P_pred)
+ds1dep$RES_ghq = -(ds1dep$SR_ghq)
+
+
+## poly SR score
+intercept_poly = summary(EP_poly)$coefficients[1]
+E_slope_poly = summary(EP_poly)$coefficients[2]
+E_slope2_poly = summary(EP_poly)$coefficients[3]
+
+### predicted E wwould be predE = slope*actualE + intercept
+## #calculate predicted E based on this formula
+
+ds1dep$P_pred_poly = (intercept_poly + scale(ds1dep$E)*E_slope_poly + (scale(ds1dep$E)^2)*E_slope2_poly)
+
+
+ds1dep$SR_poly_ghq = scale(scale(ds1dep$ghq) -ds1dep$P_pred_poly)
+ds1dep$RES_poly_ghq <- -(ds1dep$SR_poly_ghq)
+
+# phq SR score
+## random slopes and intercepts
+
+EP      <- lm(scale(phq) ~ poly(scale(E),1,raw = TRUE),data=ds1dep)  
+EP_poly <- lm(scale(phq) ~ poly(scale(E),2,raw = TRUE),data=ds1dep)  
+
+
+### compare model fits
+anova(EP,EP_poly,test="Chisq")
+
+
+### plot differ EP lines
+
+plot <- ggplot(ds1dep, aes(x = scale(E), y = scale(phq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear EP line phq")
+
+plot <- ggplot(ds1dep, aes(x = scale(E), y = scale(phq))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line phq")
+
+
+## calc linear SR score
+intercept = summary(EP)$coefficients[1]
+E_slope = summary(EP)$coefficients[2]
+
+### predicted E wwould be predE = slope*actualE + intercept
+### calculate predicted E based on this formula
+ds1dep$P_pred = (intercept + scale(ds1dep$E)*E_slope)
+
+ds1dep$SR_phq= scale(scale(ds1dep$phq) - ds1dep$P_pred)
+ds1dep$RES_phq = -(ds1dep$SR_phq)
+
+
+## poly SR score
+intercept_poly = summary(EP_poly)$coefficients[1]
+E_slope_poly = summary(EP_poly)$coefficients[2]
+E_slope2_poly = summary(EP_poly)$coefficients[3]
+
+### predicted E wwould be predE = slope*actualE + intercept
+## #calculate predicted E based on this formula
+
+ds1dep$P_pred_poly = (intercept_poly + scale(ds1dep$E)*E_slope_poly + (scale(ds1dep$E)^2)*E_slope2_poly)
+
+
+ds1dep$SR_poly_phq = scale(scale(ds1dep$phq) -ds1dep$P_pred_poly)
+ds1dep$RES_poly_phq <- -(ds1dep$SR_poly_phq)
+
+
+# correlations 
+psych::pairs.panels(ds1dep[c("RES_phq", "RES_poly_phq","RES_ghq", "RES_poly_ghq", "ghq", "phq")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE, # show correlation ellipses
+             main = "over all timepoints"
+             )
 
 ```
 
 
+## Results: wave 1 across samples
 
-# complete dataset N~230
+### Descriptive table
+
+```{r tablestrata}
+
+# ds1, ds1top, ds1m, ds1dep
+
+
+des_prof <- ds1 %>% 
+  group_by(profession_hcw) %>% 
+  summarise(
+    across(.cols= c(starts_with("SR"), "phq", "ghq", "E"),
+           ~ paste0(mean(.) %>% round(2), "(±", sd(.) %>% round(2), ")")
+                        )
+                ) 
+        
+des_age <- ds1 %>% 
+  group_by(age_cat) %>% 
+  summarise(
+    across(.cols= c(starts_with("SR"), "phq", "ghq", "E"),
+        ~ paste0(mean(.) %>% round(2), "(±", sd(.) %>% round(2), ")")
+        )
+    ) 
+        
+        
+des_gen <- ds1 %>% 
+  group_by(sd03) %>% 
+  summarise(
+    across(.cols= c(starts_with("SR"), "phq", "ghq", "E"),
+        ~ paste0(mean(.) %>% round(2), "(±", sd(.) %>% round(2), ")")
+        )
+    ) 
+
+# wave 1 all -------------------------------------------------------
+## kinda works
+
+### profession hcw
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "profession_hcw")&!hashed_id) %>% 
+tbl_summary(., by = profession_hcw,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 hcw")
+
+### age
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "age_cat")&!hashed_id) %>% 
+tbl_summary(., by = age_cat,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p() %>% 
+  modify_caption("ds1 age")
+
+### gender
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "sd03")&!hashed_id) %>% 
+tbl_summary(., by = sd03,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 gender")
+
+
+### ra50 social support at work
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra50")&!hashed_id) %>% 
+tbl_summary(., by = ra50,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 ra50")
+
+### ra51 social support
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra51")&!hashed_id) %>% 
+tbl_summary(., by = ra51,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 ra51")
+
+
+### ep31
+
+# ds1 %>%
+#   ungroup() %>% 
+#   select(c(starts_with("SR"), "phq", "ghq", "E", "ep31")&!hashed_id) %>% 
+# tbl_summary(., by = ep31,
+#             statistic = all_continuous()~ "{mean} ({sd})",
+#             type = everything() ~"continuous") %>% 
+#   add_p()
+
+### mp25g trust in gov
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25g")&!hashed_id) %>% 
+tbl_summary(., by = mp25g,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 mp25g")
+
+
+### mp25f trust in work
+
+ds1 %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25f")&!hashed_id) %>% 
+tbl_summary(., by = mp25f,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1 mp25f")
+
+
+
+
+# wave 1 madrid -------------------------------------------------------
+## kinda works
+
+### profession hcw
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "profession_hcw")&!hashed_id) %>% 
+tbl_summary(., by = profession_hcw,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m hcw")
+
+### age
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "age_cat")&!hashed_id) %>% 
+tbl_summary(., by = age_cat,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m age")
+
+### gender
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "sd03")&!hashed_id) %>% 
+tbl_summary(., by = sd03,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m gen")
+
+
+### ra50
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra50")&!hashed_id) %>% 
+tbl_summary(., by = ra50,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m ra50")
+
+### ra51
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra51")&!hashed_id) %>% 
+tbl_summary(., by = ra51,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m ra51")
+
+
+### ep31
+
+# ds1m %>%
+#   ungroup() %>% 
+#   select(c(starts_with("SR"), "phq", "ghq", "E", "ep31")&!hashed_id) %>% 
+# tbl_summary(., by = ep31,
+#             statistic = all_continuous()~ "{mean} ({sd})",
+#             type = everything() ~"continuous") %>% 
+#   add_p()
+
+### mp25g trust in government
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25g")&!hashed_id) %>% 
+tbl_summary(., by = mp25g,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m mp25g")
+
+
+### mp25f trust in workplace
+
+ds1m %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25f")&!hashed_id) %>% 
+tbl_summary(., by = mp25f,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1m mp25f")
+
+
+
+# wave 1 top66 -------------------------------------------------------
+## kinda works
+
+### profession hcw
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "profession_hcw")&!hashed_id) %>% 
+tbl_summary(., by = profession_hcw,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top hcw")
+
+### age
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "age_cat")&!hashed_id) %>% 
+tbl_summary(., by = age_cat,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top age")
+
+### gender
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "sd03")&!hashed_id) %>% 
+tbl_summary(., by = sd03,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top gen")
+
+
+### ra50
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra50")&!hashed_id) %>% 
+tbl_summary(., by = ra50,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top ra50")
+
+### ra51
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra51")&!hashed_id) %>% 
+tbl_summary(., by = ra51,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top ra51")
+
+
+### ep31
+
+# ds1top %>%
+#   ungroup() %>% 
+#   select(c(starts_with("SR"), "phq", "ghq", "E", "ep31")&!hashed_id) %>% 
+# tbl_summary(., by = ep31,
+#             statistic = all_continuous()~ "{mean} ({sd})",
+#             type = everything() ~"continuous") %>% 
+#   add_p()
+
+### mp25g
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25g")&!hashed_id) %>% 
+tbl_summary(., by = mp25g,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top mp25g")
+
+
+### mp25f
+
+ds1top %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25f")&!hashed_id) %>% 
+tbl_summary(., by = mp25f,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1top mp25f")
+
+
+
+# wave 1 dep -------------------------------------------------------
+## kinda works
+
+### profession hcw
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "profession_hcw")&!hashed_id) %>% 
+tbl_summary(., by = profession_hcw,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep hcw")
+
+### age
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "age_cat")&!hashed_id) %>% 
+tbl_summary(., by = age_cat,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep age")
+
+### gender
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "sd03")&!hashed_id) %>% 
+tbl_summary(., by = sd03,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep gen")
+
+
+### ra50
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra50")&!hashed_id) %>% 
+tbl_summary(., by = ra50,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep ra50")
+
+### ra51
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "ra51")&!hashed_id) %>% 
+tbl_summary(., by = ra51,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep ra51")
+
+
+### ep31
+
+# ds1dep %>%
+#   ungroup() %>% 
+#   select(c(starts_with("SR"), "phq", "ghq", "E", "ep31")&!hashed_id) %>% 
+# tbl_summary(., by = ep31,
+#             statistic = all_continuous()~ "{mean} ({sd})",
+#             type = everything() ~"continuous") %>% 
+#   add_p()
+
+### mp25g
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25g")&!hashed_id) %>% 
+tbl_summary(., by = mp25g,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep mp25g")
+
+
+### mp25f
+
+ds1dep %>%
+  ungroup() %>% 
+  select(c(starts_with("SR"), "phq", "ghq", "E", "mp25f")&!hashed_id) %>% 
+tbl_summary(., by = mp25f,
+            statistic = all_continuous()~ "{mean} ({sd})",
+            type = everything() ~"continuous") %>% 
+  add_p()%>% 
+  modify_caption("ds1dep mp25f")
+
+
+```
+
+
+# Analyses: wave 2 cross-sectional
+
+## descriptives
+
+```{r descwav2 }
+
+# for each wave you need to grep the new items, this needs to happen in the right order
+# this is because stressors differ across waves, since I separated datasets before recoding stressors 
+
+ehc <- grep("ehc_", names(ds2), value = TRUE)
+
+ec <- grep("ec_", names(ds2), value = TRUE)
+
+e_rel <- grep("e_rel", names(ds2), value = TRUE)
+et <- grep("et_", names(ds2), value = TRUE)
+eg <- grep("eg_", names(ds2), value = TRUE)
+
+knitr::kable(psych::describe(ds2[e_items]))
+knitr::kable(psych::describe(ds2[e_raw]))
+
+
+## ehc
+ds2[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## ec
+ds2[c(ec, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+```
+
+
+# Analyses wave 3 cross-sectional
+
+```{r descwav3 }
+
+# for each wave you need to grep the new items, this needs to happen in the right order
+# this is because stressors differ across waves, since I separated datasets before recoding stressors 
+
+ehc <- grep("ehc_", names(ds3), value = TRUE)
+
+ec <- grep("ec_", names(ds3), value = TRUE)
+
+e_rel <- grep("e_rel", names(ds3), value = TRUE)
+et <- grep("et_", names(ds3), value = TRUE)
+eg <- grep("eg_", names(ds3), value = TRUE)
+
+knitr::kable(psych::describe(ds3[e_items]))
+knitr::kable(psych::describe(ds3[e_raw]))
+
+
+## ehc
+ds3[c(e_items, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of hc stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+## ec
+ds3[c(ec, "hashed_id")] %>%
+  gather("Type", "Value",-hashed_id) %>%
+  ggplot(aes(x=as.factor(Value)))+
+  geom_bar(position="dodge")+
+  facet_wrap(~Type,scales = "free_x") +
+  ggtitle("Count of covid stressors", subtitle = "")+
+  xlab("Answer")+
+  ylab("Count") 
+
+
+```
+
+# Analyses: longitudinal across all waves
+
+The complete dataset has N~230
 
 ```{r ds-complete}
+
+ehc <- grep("ehc_", names(dsc), value = TRUE)
+
+ec <- grep("ec_", names(dsc), value = TRUE)
+
+e_rel <- grep("e_rel", names(dsc), value = TRUE)
+et <- grep("et_", names(dsc), value = TRUE)
+eg <- grep("eg_", names(dsc), value = TRUE)
 
 # dsc$ehc <-rowSums(dsc[ehc], na.rm = TRUE)
 # dsc$ec <-rowSums(dsc[ec], na.rm = TRUE)
