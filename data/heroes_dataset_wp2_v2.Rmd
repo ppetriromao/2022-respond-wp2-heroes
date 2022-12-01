@@ -112,7 +112,9 @@ rm(raw_t2_colnames,
    raw_t2_colnames_edited)
 ```
 
-### Ps support
+### Solving mistakes in survey design
+
+#### Ps support
 
 *This is how the psychological support section is structured at T0*
 
@@ -231,7 +233,7 @@ raw_t2 <-
          )
 ```
 
-### MP25d
+#### MP25d
 
 Item MP25d is impossible to harmonise across waves. 
 
@@ -261,6 +263,23 @@ raw_t2 <-
   raw_t2 %>% 
   rename(MP25d_2and3 = MP25d)
 ```
+
+#### MP25a and MP25aa 
+
+Items MP25a (wave 1) and MP25aa (waves 2 and 3) are basically the same. I recode this as follows:
+
+```{r}
+raw_t1 <- 
+  raw_t1 %>% 
+  rename(MP25a = MP25aa)
+
+raw_t2 <- 
+  raw_t2 %>% 
+  rename(MP25a = MP25aa)
+```
+
+
+
 
 ### Bind rows
 
