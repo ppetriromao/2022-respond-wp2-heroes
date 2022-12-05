@@ -1,0 +1,709 @@
+---
+title: "HEROES-Spain resilience analysis"
+author: "Papoula Petri-Romão & Roberto Mediavilla"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(pacman)
+p_load(tidyverse,
+       psych,
+       lme4,
+       gtsummary)
+
+ds <- readRDS("data/heroes_wp2_anonymised.rds")
+
+ds_labels <- labelled::var_label(ds) # to restore labels
+ds_bis <- ds # use ds <- sjlabelled::var_lables(ds_bis) to restore
+```
+
+# Pre work
+
+```{r var transf}
+
+# restore NAs
+
+ds <- 
+  ds %>% 
+  mutate(
+    across(
+      .cols = where(is.factor),
+      .fns = ~ fct_recode(.,
+                          NULL = "-991",
+                          NULL = "-992",
+                          NULL = "-993")
+    ),
+    across(
+      .cols = where(is.numeric),
+      .fns = ~if_else(. < -990,
+                      NA_real_,
+                      .)
+    )
+  )
+
+# add NAs
+
+ds <- 
+  ds %>% 
+  mutate(
+    ep32 = fct_recode(ep32,
+                      NULL = "2", # n/a
+                      NULL = "3"), # prefer not
+    mp18 = fct_recode(mp18,
+                      NULL = "2"), # don't know
+    mp18aa =fct_recode(mp18aa,
+                       NULL = "2"), # n/a
+    mp18ab = fct_recode(mp18ab,
+                        NULL = "2"), # don't know
+    mp19 = fct_recode(mp19,
+                      NULL = "4"), # n/a
+    mp25a = fct_recode(mp25a,
+                       NULL = "2"), # don't know
+    sd03 = fct_recode(sd03,
+                      NULL = "3"), # non-binary but only 10
+    ep31 = fct_recode(ep31,
+                      NULL = "2"), # n/a
+    mp25b = fct_recode(mp25d,
+                       NULL = "2", # don't know
+                       NULL = "3") # n/a
+    )
+
+# aggregated outcome scores
+
+ds <- 
+  ds %>%
+  mutate(ghq_total = select(., c(ad34:ad45)) %>% rowSums(),
+         phq_total = select(., c(phq68:phq76)) %>% rowSums())
+
+ds <- 
+  ds %>% 
+  mutate(
+    across(
+      starts_with("ad"),
+      ~ recode(., 
+               "0" = 0,               
+               "1" = 0,
+               "2" = 1,
+               "3" = 1)
+      )
+    ) %>%
+  mutate(ghq_score = select(.,
+                       starts_with("ad")) %>% rowSums())
+
+# BRS score
+
+ds <- 
+  ds %>% 
+  mutate(
+    across(
+      .cols = c(re58,re60,re63),
+      .fns = ~ recode(.,
+                      "1" = 5,
+                      "2" = 4,
+                      "3" = 3,
+                      "4" = 2,
+                      "5" = 1) %>% 
+        as.numeric
+    ),
+    brs_total = select(., c(re57:re63)) %>% rowSums()/6
+  )
+```
+
+```{r drop fake nas}
+ds %>% 
+  group_by(wave) %>% 
+  filter(is.na(assessment_week)) %>% 
+  select(1:99) %>% 
+  skimr::skim()
+  
+ds <- 
+  ds %>% 
+  drop_na(assessment_week)
+```
+
+```{r stressors coding}
+ds <- 
+  ds %>% 
+  mutate(
+    
+    # HCW stressors
+    
+    ehc_01 = tr15,
+    ehc_02 = case_when(tr16 >= 6 ~ 1,
+                       tr16 < 6 ~ 0,
+                       TRUE ~ NA_real_) %>% 
+      as_factor(), # FIXME: remove this
+    ehc_03 = case_when(tr17 >= 12 ~ 1,
+                       tr17 < 12 ~ 0,
+                       TRUE ~ NA_real_) %>% 
+      as_factor(),
+    ehc_04 = ep32,
+    ehc_05 = mp18,
+    ehc_06 = mp18aa, # Check?
+    ehc_07 = fct_collapse(mp25c,
+                         "0" = c("1", "2"),
+                         "1" = c("3", "4")),
+    ehc_08 = if_else(wave == "1",
+                     fct_collapse(mp25d,
+                                    "1" = c("1","2", "3")),
+                     fct_collapse(mp25d_2and3,
+                                    "0" = c("0", "1", "2"),
+                                    "1" = c("3", "4"))), #TODO: keep an eye
+    ehc_09 = fct_collapse(mp25e,
+                          "0" = c("1", "2"),
+                          "1" = c("3", "4")),
+    ehc_10 = fct_recode(mp19,
+                        "0" = "3",
+                        "1" = "2",
+                        "1" = "1",
+                        "1" = "0"), #TODO: check direction
+    ehc_11 = mp25a,
+    
+    # COVID-19 stressors
+    
+    ec_01 = fct_collapse(mp21,
+                         "1" = c("1", "2", "3")),
+    ec_02 = fct_collapse(mp23,
+                         "1" = c("1", "2", "3")),
+    ec_03 = mp18ab,
+    ec_04 = mp24,
+    ec_05 = mp25,
+    ec_06 = mp25b
+  )
+
+ds <- 
+  ds %>% 
+  sjlabelled::var_labels(ehc_01 = "New functions",
+                         ehc_02 = "Work more than 6 days",
+                         ehc_03 = "Work more than 12h/day",
+                         ehc_04 = "Triage decisions",
+                         ehc_05 = "Frontline",
+                         ehc_06 = "COVID-19 unit (waves 2 and 3)",
+                         ehc_07 = "Stigma / discrimination",
+                         ehc_08 = "Problems with patients' relatives",
+                         ehc_09 = "Violence",
+                         ehc_10 = "PPE shortages",
+                         ehc_11 = "Patients passed away",
+                         ec_01 = "Worry infection (self)",
+                         ec_02 = "Worry infection (others)",
+                         ec_03 = "Infected (waves 2 and 3)",
+                         ec_04 = "Loved ones infected",
+                         ec_05 = "Loved ones passed away",
+                         ec_06 = "Patients passed away") 
+
+allstressors <- 
+  ds %>% 
+  select(ehc_01,
+         tr15,
+         ehc_02,
+         tr16,
+         ehc_03,
+         tr17,
+         ehc_04,
+         ep32,
+         ehc_05,
+         mp18,
+         ehc_06,
+         mp18aa,
+         ehc_07,
+         mp25c,
+         ehc_08,
+         mp25d,
+         mp25d_2and3,
+         ehc_09,
+         mp25e,
+         ehc_10,
+         mp19,
+         ehc_11,
+         mp25a,
+         ec_01,
+         mp21,
+         ec_02,
+         mp23,
+         ec_03,
+         mp18ab,
+         ec_04,
+         mp24,
+         ec_05,
+         mp25,
+         ec_06, 
+         mp25b) %>% 
+  names()
+
+```
+
+```{r stressors coding test, eval = FALSE}
+ds %>% 
+  select(matches(allstressors)) %>% 
+  skimr::skim()
+
+ds %>% 
+  group_by(wave) %>% 
+  select(matches(allstressors)) %>% 
+  skimr::skim() # Missing values in all stressors across waves
+```
+
+Here it's very important that we rescale if needed (e.g., if one wave has
+missing data on an certain item)
+
+And this is an overview
+
+```{r overview stressors, eval = FALSE}
+
+# Raw stressors, outcomes, and strata
+
+ds %>% 
+  select(
+    
+    hashed_id,
+    wave,
+    
+    # outcomes
+    
+    ghq_score,
+    phq_total,
+    
+    # stressors
+    
+    tr15, # new functions
+    tr16, # days/week worked
+    tr17, # hours/day worked
+    ep32, # prioritisation
+    mp18, # frontline
+    mp18aa, # covid-19 unit (waves 2 and 3)
+    mp18ab, #covid-19-positive (waves 2 and 3)
+    mp21, # worry (self)
+    mp22, # days isolation
+    mp23, # worry (others)
+    mp24, # loved-ones covid-19-positive
+    mp25, # loved-ones passed away
+    mp25b, # patients passed away
+    mp25c, # stigma / discrimination
+    mp25d, # problems w/ patients' relatives (wave 1)
+    mp25d_2and3, # problems w/ patients relatives (waves 2 and 3)
+    mp25e, # violence
+    mp19, # PPE
+    mp25a, # some at work passed away (MP25a and MP25aa already harmonised)
+    
+    # strata
+    
+    sd03,
+    age_cat,
+    profession,
+    profession_hcw,
+    tr15, # medical specialty
+    ra50, # soc support at work
+    ra51, # soc support outside
+    brs_total,
+    province,
+    nuts_id,
+    ep31, # prioritisation instructions
+    mp25g, # trust government (wave 1)
+    mp25ea, # trust government (waves 2 and 3)
+    mp25f, # trust workplace (wave 1)
+    mp25fb, # trust work colleagues (wave 2 and 3)
+    #TODO: harmonise if important longitudinally (not identical items)
+    ) %>% 
+  skimr::skim()
+
+# Raw stressors, outcomes, and strata, by wave
+
+ds %>% 
+  select(
+    
+    #hashed_id,
+    wave,
+    
+    # outcomes
+    
+    ghq_total,
+    phq_total,
+    
+    # stressors
+    
+    tr15, # new functions
+    tr16, # days/week worked
+    tr17, # hours/day worked
+    ep32, # prioritisation
+    mp18, # frontline
+    mp18aa, # covid-19 unit (waves 2 and 3)
+    mp18ab, #covid-19-positive (waves 2 and 3)
+    mp21, # worry (self)
+    mp22, # days isolation
+    mp23, # worry (others)
+    mp24, # loved-ones covid-19-positive
+    mp25, # loved-ones passed away
+    mp25b, # patients passed away
+    mp25c, # stigma / discrimination
+    mp25d, # problems w/ patients' relatives (wave 1)
+    mp25d_2and3, # problems w/ patients relatives (waves 2 and 3)
+    mp25e, # violence
+    mp19, # PPE
+    mp25a, # some at work passed away (MP25a and MP25aa already harmonised)
+    
+    # strata
+    
+    sd03,
+    age_cat,
+    profession,
+    profession_hcw,
+    #tr15, # medical specialty
+    ra50, # soc support at work
+    ra51, # soc support outside
+    brs_total,
+    #province,
+    #nuts_id,
+    ep31, # prioritisation instructions
+    mp25g, # trust government (wave 1)
+    mp25ea, # trust government (waves 2 and 3)
+    mp25f, # trust workplace (wave 1)
+    mp25fb # trust work colleagues (wave 2 and 3)
+  ) %>% 
+  tbl_summary(.,
+              by = wave)
+
+
+
+# recoded stressors and outcomes (by wave)
+
+ds %>% 
+  select(wave,
+         starts_with(c("ehc_", "ec_")),
+         phq_total,
+         ghq_total,
+         brs_total) %>% 
+  tbl_summary(., by = wave)
+
+# corplots recoded stressors and outcomes (by wave)
+
+ds %>% 
+  filter(wave == 1) %>% 
+  select(matches(allstressors)) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  cor.plot(main = "Wave 1")
+
+ds %>% 
+  filter(wave == 1) %>% 
+  select(matches(allstressors)) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  cor.plot(main = "Wave 2")
+
+ds %>% 
+  filter(wave == 1) %>% 
+  select(matches(allstressors)) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  cor.plot(main = "Wave 3")
+```
+
+# The mess
+
+Descriptives show that all stressors have NAs
+
+## First approach to calculating E scores
+
+```{r E scores 1, eval = FALSE}
+e_items <- grep("ehc_|ec_", names(ds), value = TRUE)
+ehc <- grep("ehc_", names(ds), value = TRUE)
+ec <- grep("ec_", names(ds), value = TRUE)
+
+ds$ehc <- 
+  psych::scoreItems(ehc, 
+                    ds[ehc], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+ds$ec <- 
+  psych::scoreItems(ec, 
+                    ds[ec], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+ds$E <- 
+  psych::scoreItems(e_items, 
+                    ds[e_items], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+
+# Check
+
+ds %>% 
+  select(hashed_id,
+         wave,
+         starts_with(c("ehc_", "ec_")),
+         "ehc",
+         "ec",
+         "E")
+```
+
+The aggregated scores make no sense. Probably because we are scoring factors.
+
+## Second approach
+
+```{r E scores 2, eval = FALSE}
+e_items <- grep("ehc_|ec_", names(ds), value = TRUE)
+ehc <- grep("ehc_", names(ds), value = TRUE)
+ec <- grep("ec_", names(ds), value = TRUE)
+
+# I create an additional dataset to
+# change the class of the factors
+
+ds_num <-
+  ds %>%
+  mutate(
+    across(
+      .cols = starts_with(c("ehc_", "ec_")),
+      .fns = ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  select(hashed_id,
+         wave,
+         starts_with(c("ehc_", "ec_")))
+
+# I check that this change keeps
+# the true value of factors, compared to the
+# original dataset
+
+ds_num %>% 
+  select(starts_with(c("ehc", "ec")))
+ds %>% 
+  select(starts_with(c("ehc", "ec")),
+         -economic_support_index,
+         -economic_support_index_for_display)
+
+# I use the same code to calculate the scores
+
+ds_num$ehc <- 
+  psych::scoreItems(ehc, 
+                    ds_num[ehc], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+
+
+ds_num$ec <- 
+  psych::scoreItems(ec, 
+                    ds_num[ec], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+ds_num$E <- 
+  psych::scoreItems(e_items, 
+                    ds_num[e_items], 
+                    totals = TRUE,
+                    impute = FALSE)$scores %>% 
+  as.numeric()
+
+# I check the supplementary dataset,
+# which does not make sense either
+
+ds_num %>% 
+  select(hashed_id,
+         wave,
+         starts_with(c("ehc_", "ec_")),
+         "ehc",
+         "ec",
+         "E")
+
+```
+
+## Third approach
+
+I use rowSums instead of scoreItems
+
+```{r E scores 3, eval = FALSE}
+ds_num <- 
+  ds %>%
+  mutate(
+    across(
+      .cols = starts_with(c("ehc_", "ec_")),
+      .fns = ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  select(hashed_id,
+         wave,
+         starts_with(c("ehc_", "ec_")))
+
+ds_num %>% 
+  mutate(ehc = select(.,
+                      starts_with("ehc_")) %>% rowSums(na.rm = TRUE),
+         ec = select(.,
+                     starts_with("ec_")) %>% rowSums(na.rm = TRUE),
+         E = select(.,
+                     starts_with(c("ehc_","ec_"))) %>% rowSums(na.rm = TRUE))
+
+```
+
+With this approach, the aggregated scores are performed correctly. The only
+problem that persists is that NAs are scored as 0. One approach could be to have
+a stressor count that is relative to the number of questions effectively
+answered.
+
+After this is fixed, we can use the following code
+
+# SR scores
+
+```{r sr scores}
+
+# Wave 1
+
+EP_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  drop_na(assessment_week) %>% # TODO: remove them in the beginning
+  lm(scale(phq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(phq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w1,EP_poly_w1,test="Chisq")
+
+remove(EP_poly_w1)
+
+intercept <- summary(EP_w1)$coefficients[1]
+E_slope <- summary(EP_w1)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred = if_else(wave == 1,
+                          (intercept + scale(ds$E)*E_slope),
+                          NA_real_),
+         SR = if_else(wave == 1,
+                      scale(scale(phq_total) - P_pred),
+                      NA_real_),
+         RES = if_else(wave == 1,
+                       -SR,
+                       NA_real_)
+  )
+
+remove(intercept,
+       E_slope)
+
+# Wave 2
+
+EP_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(phq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(phq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w2,EP_poly_w2,test="Chisq")
+
+intercept <- summary(EP_w2)$coefficients[1]
+E_slope <- summary(EP_w2)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred = if_else(wave == 2,
+                          (intercept + scale(ds$E)*E_slope),
+                          P_pred),
+         SR = if_else(wave == 2,
+                      scale(scale(phq_total) - P_pred),
+                      SR),
+         RES = if_else(wave == 2,
+                       -SR,
+                       RES)
+  )
+
+remove(intercept,
+       E_slope)
+
+# Wave 3
+
+EP_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(phq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(phq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w3,EP_poly_w3,test="Chisq")
+
+intercept <- summary(EP_w3)$coefficients[1]
+E_slope <- summary(EP_w3)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred = if_else(wave == 3,
+                          (intercept + scale(ds$E)*E_slope),
+                          P_pred),
+         SR = if_else(wave == 3,
+                      scale(scale(phq_total) - P_pred),
+                      SR),
+         RES = if_else(wave == 3,
+                       -SR,
+                       RES)
+  )
+
+remove(intercept,
+       E_slope)
+```
+
+```{r overview E scores}
+ds %>% 
+  select(allstressors,
+         ehc,
+         ec,
+         E,
+         P_pred,
+         SR,
+         RES) %>% 
+  skimr::skim()
+
+ds %>% 
+  group_by(wave) %>% 
+  select(P_pred:RES) %>% 
+  skimr::skim()
+```
+
+If using ScoreItems, set impute data to FALSE
+
+Drop NAs when filtering by wave? (something like this below)
+
+```{r}
+ds %>% 
+  filter(wave == 1) %>% 
+  drop_na(assessment_week)
+
+ds %>% 
+  filter(wave == 2) %>% 
+  drop_na(assessment_week)
+
+ds %>% 
+  filter(wave == 3) %>% 
+  drop_na(assessment_week)
+```
