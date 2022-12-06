@@ -536,7 +536,7 @@ ds_num %>%
 
 I use rowSums instead of scoreItems
 
-```{r E scores 3, eval = FALSE}
+```{r E scores 3}
 ds_num <- 
   ds %>%
   mutate(
@@ -549,7 +549,8 @@ ds_num <-
          wave,
          starts_with(c("ehc_", "ec_")))
 
-ds_num %>% 
+ds_num <- 
+  ds_num %>% 
   mutate(ehc = select(.,
                       starts_with("ehc_")) %>% rowSums(na.rm = TRUE),
          ec = select(.,
@@ -557,25 +558,75 @@ ds_num %>%
          E = select(.,
                      starts_with(c("ehc_","ec_"))) %>% rowSums(na.rm = TRUE))
 
+# Absolute exposure scores
+
+ds_num <- 
+  ds_num %>% 
+  mutate(ec = if_else(if_all(starts_with("ec_"), is.na),
+                      NA_real_,
+                      ec),
+         ehc = if_else(if_all(starts_with("ehc_"), is.na),
+                      NA_real_,
+                      ehc),
+         E = if_else(if_all(starts_with(c("ec_", "ehc_")), is.na),
+                      NA_real_,
+                      E)
+  )
+
+# Relative exposure scores
+
+ds_num <- 
+  ds_num %>% 
+  mutate(ehc_val = rowSums(!is.na(select(.,
+                                        starts_with("ehc_")))),
+         ec_val = rowSums(!is.na(select(., 
+                                       starts_with("ec_")))),
+         E_val = rowSums(!is.na(select(.,
+                                      starts_with(
+                                        c("ec_", "ehc"))))),
+         ehc_rel = ehc/ehc_val*100,
+         ec_rel = ec/ec_val*100,
+         E_rel = E/E_val*100)
+
+# Join with main dataset
+
+ds <- 
+  ds_num %>% 
+  select(hashed_id,
+         wave,
+         ehc:E_rel) %>% 
+  left_join(ds,
+            .,
+            by = c("hashed_id", "wave"))
+
 ```
 
-With this approach, the aggregated scores are performed correctly. The only
-problem that persists is that NAs are scored as 0. One approach could be to have
-a stressor count that is relative to the number of questions effectively
-answered.
+```{r overview exposures}
 
-After this is fixed, we can use the following code
+ds %>% 
+  select(wave,
+         starts_with(c("ehc",
+                       "ec")),
+         E,
+         E_rel,
+         -economic_support_index,
+         -economic_support_index_for_display) %>% 
+  group_by(wave) %>% 
+  skimr::skim()
 
-# SR scores
+```
 
-```{r sr scores}
+Alles in Ordnung (apparently...)
+
+# SR scores (cross-sectional)
+
+```{r sr abs cs phq}
 
 # Wave 1
 
 EP_w1 <- 
   ds %>% 
   filter(wave == 1) %>% 
-  drop_na(assessment_week) %>% # TODO: remove them in the beginning
   lm(scale(phq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
 
 EP_poly_w1 <- 
@@ -602,6 +653,13 @@ ds <-
                        -SR,
                        NA_real_)
   )
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred,
+         SR,
+         RES) %>% 
+  skimr::skim()
 
 remove(intercept,
        E_slope)
@@ -639,6 +697,33 @@ ds <-
 remove(intercept,
        E_slope)
 
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred,
+         SR,
+         RES) %>% 
+  skimr::skim()
+
+plot <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  ggplot(.,
+         aes(x = scale(E), y = scale(phq_total))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(method = "lm") +
+  ggtitle("Linear EP line PHQ")
+
+plot <-
+  ds %>% 
+  filter(wave== 2) %>% 
+  ggplot(., 
+         aes(x = scale(E), y = scale(phq_total))) +
+  geom_point() +
+  labs(x="E", y="P") +
+  geom_smooth(formula = y ~ poly(x, 2, raw=TRUE)) +
+    ggtitle("quadratic E-P line PHQ")
+
 # Wave 3
 
 EP_w3 <- 
@@ -671,39 +756,623 @@ ds <-
 
 remove(intercept,
        E_slope)
-```
 
-```{r overview E scores}
-ds %>% 
-  select(allstressors,
-         ehc,
-         ec,
-         E,
-         P_pred,
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred,
          SR,
          RES) %>% 
   skimr::skim()
+```
 
-ds %>% 
+```{r sr abs cs ghq}
+
+# Wave 1
+
+EP_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w1,EP_poly_w1,test="Chisq")
+
+remove(EP_poly_w1)
+
+intercept <- summary(EP_w1)$coefficients[1]
+E_slope <- summary(EP_w1)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq = if_else(wave == 1,
+                          (intercept + scale(ds$E)*E_slope),
+                          NA_real_),
+         SR_ghq = if_else(wave == 1,
+                      scale(scale(ghq_total) - P_pred_ghq),
+                      NA_real_),
+         RES_ghq = if_else(wave == 1,
+                       -SR_ghq,
+                       NA_real_)
+  )
+
+ds %>% # Check
   group_by(wave) %>% 
-  select(P_pred:RES) %>% 
+  select(P_pred_ghq,
+         SR_ghq,
+         RES_ghq) %>% 
+  skimr::skim()
+
+remove(intercept,
+       E_slope)
+
+# Wave 2
+
+EP_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w2,EP_poly_w2,test="Chisq")
+
+intercept <- summary(EP_w2)$coefficients[1]
+E_slope <- summary(EP_w2)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq = if_else(wave == 2,
+                          (intercept + scale(ds$E)*E_slope),
+                          P_pred_ghq),
+         SR_ghq = if_else(wave == 2,
+                      scale(scale(ghq_total) - P_pred_ghq),
+                      SR_ghq),
+         RES_ghq = if_else(wave == 2,
+                       -SR_ghq,
+                       RES_ghq)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_ghq,
+         SR_ghq,
+         RES_ghq) %>% 
+  skimr::skim()
+
+# Wave 3
+
+EP_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 1, raw = TRUE), data = .)
+
+EP_poly_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E), 2, raw = TRUE), data = .)
+
+anova(EP_w3,EP_poly_w3,test="Chisq")
+
+intercept <- summary(EP_w3)$coefficients[1]
+E_slope <- summary(EP_w3)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq = if_else(wave == 3,
+                          (intercept + scale(ds$E)*E_slope),
+                          P_pred_ghq),
+         SR_ghq = if_else(wave == 3,
+                      scale(scale(ghq_total) - P_pred_ghq),
+                      SR_ghq),
+         RES_ghq = if_else(wave == 3,
+                       -SR_ghq,
+                       RES_ghq)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_ghq,
+         SR_ghq,
+         RES_ghq) %>% 
   skimr::skim()
 ```
 
-If using ScoreItems, set impute data to FALSE
+# SR relative scores (cross-sectional)
 
-Drop NAs when filtering by wave? (something like this below)
+```{r sr rel cs phq}
+
+# Wave 1
+
+EP_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w1,EP_poly_w1,test="Chisq")
+
+remove(EP_poly_w1)
+
+intercept <- summary(EP_w1)$coefficients[1]
+E_slope <- summary(EP_w1)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_rel = if_else(wave == 1,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          NA_real_),
+         SR_rel = if_else(wave == 1,
+                      scale(scale(phq_total) - P_pred_rel),
+                      NA_real_),
+         RES_rel = if_else(wave == 1,
+                       -SR_rel,
+                       NA_real_)
+  )
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_rel,
+         SR_rel,
+         RES_rel) %>% 
+  skimr::skim()
+
+remove(intercept,
+       E_slope)
+
+# Wave 2
+
+EP_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w2,EP_poly_w2,test="Chisq")
+
+intercept <- summary(EP_w2)$coefficients[1]
+E_slope <- summary(EP_w2)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_rel = if_else(wave == 2,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          P_pred_rel),
+         SR_rel = if_else(wave == 2,
+                      scale(scale(phq_total) - P_pred_rel),
+                      SR),
+         RES_rel = if_else(wave == 2,
+                       -SR_rel,
+                       RES_rel)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_rel,
+         SR_rel,
+         RES_rel) %>% 
+  skimr::skim()
+
+# Wave 3
+
+EP_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(phq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w3,EP_poly_w3,test="Chisq")
+
+intercept <- summary(EP_w3)$coefficients[1]
+E_slope <- summary(EP_w3)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_rel = if_else(wave == 3,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          P_pred_rel),
+         SR_rel = if_else(wave == 3,
+                      scale(scale(phq_total) - P_pred_rel),
+                      SR),
+         RES_rel = if_else(wave == 3,
+                       -SR_rel,
+                       RES_rel)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_rel,
+         SR_rel,
+         RES_rel) %>% 
+  skimr::skim()
+
+```
+
+```{r sr rel cs ghq}
+
+# Wave 1
+
+EP_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w1,EP_poly_w1,test="Chisq")
+
+remove(EP_poly_w1)
+
+intercept <- summary(EP_w1)$coefficients[1]
+E_slope <- summary(EP_w1)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq_rel = if_else(wave == 1,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          NA_real_),
+         SR_ghq_rel = if_else(wave == 1,
+                      scale(scale(ghq_total) - P_pred_ghq_rel),
+                      NA_real_),
+         RES_ghq_rel = if_else(wave == 1,
+                       -SR_ghq_rel,
+                       NA_real_)
+  )
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_ghq_rel,
+         SR_ghq_rel,
+         RES_ghq_rel) %>% 
+  skimr::skim()
+
+remove(intercept,
+       E_slope)
+
+# Wave 2
+
+EP_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w2,EP_poly_w2,test="Chisq")
+
+intercept <- summary(EP_w2)$coefficients[1]
+E_slope <- summary(EP_w2)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq_rel = if_else(wave == 2,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          P_pred_ghq_rel),
+         SR_ghq_rel = if_else(wave == 2,
+                      scale(scale(ghq_total) - P_pred_ghq_rel),
+                      SR_ghq_rel),
+         RES_ghq_rel = if_else(wave == 2,
+                       -SR_ghq_rel,
+                       RES_ghq_rel)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_ghq_rel,
+         SR_ghq_rel,
+         RES_ghq_rel) %>% 
+  skimr::skim()
+
+# Wave 3
+
+EP_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 1, raw = TRUE), data = .)
+
+EP_poly_w3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  lm(scale(ghq_total) ~ poly(scale(E_rel), 2, raw = TRUE), data = .)
+
+anova(EP_w3,EP_poly_w3,test="Chisq")
+
+intercept <- summary(EP_w3)$coefficients[1]
+E_slope <- summary(EP_w3)$coefficients[2]
+
+ds <- 
+  ds %>% 
+  mutate(P_pred_ghq_rel = if_else(wave == 3,
+                          (intercept + scale(ds$E_rel)*E_slope),
+                          P_pred_ghq_rel),
+         SR_ghq_rel = if_else(wave == 3,
+                      scale(scale(ghq_total) - P_pred_ghq_rel),
+                      SR_ghq_rel),
+         RES_ghq_rel = if_else(wave == 3,
+                       -SR_ghq_rel,
+                       RES_ghq_rel)
+  )
+
+remove(intercept,
+       E_slope)
+
+ds %>% # Check
+  group_by(wave) %>% 
+  select(P_pred_ghq_rel,
+         SR_ghq_rel,
+         RES_ghq_rel) %>% 
+  skimr::skim()
+```
+
+# SR scores (longit)
+
+Papoula
 
 ```{r}
+
+```
+
+# Outcomes
+
+```{r correlations phq}
+
 ds %>% 
   filter(wave == 1) %>% 
-  drop_na(assessment_week)
+  select(E,
+         E_rel,
+         SR,
+         SR_rel,
+         phq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 1 (cross-sectional)")
 
 ds %>% 
   filter(wave == 2) %>% 
-  drop_na(assessment_week)
+  select(E,
+         E_rel,
+         SR,
+         SR_rel,
+         phq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 2 (cross-sectional)")
 
 ds %>% 
   filter(wave == 3) %>% 
-  drop_na(assessment_week)
+  select(E,
+         E_rel,
+         SR,
+         SR_rel,
+         phq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 3 (cross-sectional)")
+
+ds %>% 
+  select(E,
+         E_rel,
+         SR,
+         SR_rel,
+         phq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "All waves (cross-sectional)")
+
+#TODO: longitudinal
+
+```
+
+```{r correlations ghq}
+
+ds %>% 
+  filter(wave == 1) %>% 
+  select(E,
+         E_rel,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 1 (cross-sectional)")
+
+ds %>% 
+  filter(wave == 2) %>% 
+  select(E,
+         E_rel,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 2 (cross-sectional)")
+
+ds %>% 
+  filter(wave == 3) %>% 
+  select(E,
+         E_rel,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "Wave 3 (cross-sectional)")
+
+ds %>% 
+  select(E,
+         E_rel,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "All waves (cross-sectional)")
+
+#TODO: longitudinal
+```
+
+# Comparison SR vs outcome scores
+
+```{r}
+ds %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession,
+         profession_hcw,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         brs_total,
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25ea, # trust government (waves 2 and 3)
+         mp25f, # trust workplace (wave 1)
+         mp25fb, # trust work colleagues (wave 2 and 3)
+         SR,
+         SR_rel,
+         phq_total,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  pivot_longer(.,
+               cols = SR:ghq_total,
+               names_to = "outcome") %>% 
+  select(-hashed_id) %>% 
+  tbl_strata(data = .,
+             strata = wave,
+             .tbl_fun = ~ tbl_summary(., by = outcome))
+
+#FIXME: this is not what I look for
+```
+
+```{r}
+ds %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession,
+         profession_hcw,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         brs_total,
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25ea, # trust government (waves 2 and 3)
+         mp25f, # trust workplace (wave 1)
+         mp25fb, # trust work colleagues (wave 2 and 3)
+         SR,
+         SR_rel,
+         phq_total,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  pivot_longer(.,
+               cols = SR:ghq_total,
+               names_to = "outcome") %>% 
+  group_by(sd03) %>% 
+  summarise(
+    across(
+      .cols = value,
+      .fns = ~ mean(value, na.rm = TRUE)
+  )               s
+  )
+```
+
+```{r}
+ds %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession,
+         profession_hcw,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         brs_total,
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25ea, # trust government (waves 2 and 3)
+         mp25f, # trust workplace (wave 1)
+         mp25fb, # trust work colleagues (wave 2 and 3)
+         SR,
+         SR_rel,
+         phq_total,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  pivot_longer(.,
+               cols = SR:ghq_total,
+               names_to = "outcome") %>% 
+  filter(wave==1) %>% 
+  ggplot(.,
+         aes(x = outcome,
+             y = value,
+             fill = sd03),
+         colour = sd03) +
+  geom_boxplot()
 ```
