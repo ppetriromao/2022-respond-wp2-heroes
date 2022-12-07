@@ -112,13 +112,13 @@ ds <-
                       "4" = 2,
                       "5" = 1) %>% 
         as.numeric
-    ),
-    brs_total = select(., c(re57:re63)) %>% rowSums()/6, #FIXME: denom n not 6
-    brs_dic = case_when(brs_total < 3 ~ "low",
-                        brs_total > 2.99 & brs_total < 4.31 ~ "normal",
-                        brs_total > 4.30 ~ "high") %>% 
-      as_factor() %>% 
-      relevel(., ref = "low")
+    )) %>%
+  mutate(brs_total = select(., c(re57:re63)) %>% rowSums()/6,
+         brs_dic = case_when(brs_total < 3 ~ "low",
+                             brs_total > 2.99 & brs_total < 4.31 ~ "normal",
+                             brs_total > 4.30 ~ "high") %>% 
+           as_factor() %>% 
+           relevel(., ref = "low")
   )
 
 # Impute missing strata at wave 3
@@ -1940,7 +1940,7 @@ w3_plots <- ggpubr::ggarrange(plotlist = plots_3)
 
 Models
 
-```{r models old}
+```{r models}
 
 # Create datasets
 
@@ -1971,7 +1971,7 @@ ds3_full <-
   filter(hashed_id %in% full_ids$hashed_id,
          wave == 3)
 
-# Get estimates
+# Get estimates wave 1
 
 sr_1 <- 
   ds1 %>% 
@@ -2069,7 +2069,39 @@ srl_1 <-
   add_column(outcome = "SR_long") %>% 
   add_column(wave = "1")
 
+phql_1 <- 
+  ds1_full %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25g, mp25f),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(phq_total ~ .x,
+           data = ds1_full) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "phq") %>% 
+  add_column(wave = "1")
 
+# Get estimates wave 2
 
 sr_2 <- 
   ds2 %>% 
@@ -2079,11 +2111,11 @@ sr_2 <-
          brs_dic,
          ra50, # soc support at work
          ra51, # soc support outside
-         mp25ea, # trust government
-         mp25fb) %>%  # trust workplace
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
   mutate(
     across(
-      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .cols = c(ra50, ra51, mp25g, mp25f),
       .fns = ~as.numeric(as.character(.))
     )
   ) %>% 
@@ -2102,25 +2134,25 @@ sr_2 <-
   add_column(outcome = "SR") %>% 
   add_column(wave = "2")
 
-srl_1 <- 
-  ds_full %>% 
+phq_2 <- 
+  ds2 %>% 
   select(sd03,
          age_cat,
          profession_hcw,
          brs_dic,
          ra50, # soc support at work
          ra51, # soc support outside
-         mp25ea, # trust government
-         mp25fb) %>%  # trust workplace
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
   mutate(
     across(
-      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .cols = c(ra50, ra51, mp25g, mp25f),
       .fns = ~as.numeric(as.character(.))
     )
   ) %>% 
   map_dfr(.,
-      ~ lm(SR_long ~ .x,
-           data = ds_full) %>% 
+      ~ lm(phq_total ~ .x,
+           data = ds2) %>% 
         broom::tidy(),
       .id = "stratum"
         ) %>% 
@@ -2130,20 +2162,17 @@ srl_1 <-
       round, 3
     )
   ) %>% 
-  add_column(outcome = "SR_long") %>% 
-  add_column(wave = "long")
+  add_column(outcome = "phq") %>% 
+  add_column(wave = "2")
 
-# I won't do wave 3 because it requires work. SR_rel same results
-
-srl_1 <- 
-  ds1 %>% 
+srl_2 <- 
+  ds2_full %>% 
   select(sd03,
          age_cat,
          profession_hcw,
          brs_dic,
          ra50, # soc support at work
          ra51, # soc support outside
-         ep31, # prioritisation instructions
          mp25g, # trust government (wave 1)
          mp25f) %>%  # trust workplace (wave 1) %>% 
   mutate(
@@ -2154,38 +2183,7 @@ srl_1 <-
   ) %>% 
   map_dfr(.,
       ~ lm(SR_long ~ .x,
-           data = ds1) %>% 
-        broom::tidy(),
-      .id = "stratum"
-        ) %>% 
-  mutate(
-    across(
-      where(is.numeric),
-      round, 3
-    )
-  ) %>% 
-  add_column(outcome = "SR_long") %>% 
-  add_column(wave = "1")
-
-srl_2 <- 
-  ds2 %>% 
-  select(sd03,
-         age_cat,
-         profession_hcw,
-         brs_dic,
-         ra50, # soc support at work
-         ra51, # soc support outside
-         mp25ea, # trust government
-         mp25fb) %>%  # trust workplace
-  mutate(
-    across(
-      .cols = c(ra50, ra51, mp25ea, mp25fb),
-      .fns = ~as.numeric(as.character(.))
-    )
-  ) %>% 
-  map_dfr(.,
-      ~ lm(SR_long ~ .x,
-           data = ds2) %>% 
+           data = ds2_full) %>% 
         broom::tidy(),
       .id = "stratum"
         ) %>% 
@@ -2198,25 +2196,25 @@ srl_2 <-
   add_column(outcome = "SR_long") %>% 
   add_column(wave = "2")
 
-srl_2 <- 
-  ds2 %>% 
+phql_2 <- 
+  ds2_full %>% 
   select(sd03,
          age_cat,
          profession_hcw,
          brs_dic,
          ra50, # soc support at work
          ra51, # soc support outside
-         mp25ea, # trust government
-         mp25fb) %>%  # trust workplace
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
   mutate(
     across(
-      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .cols = c(ra50, ra51, mp25g, mp25f),
       .fns = ~as.numeric(as.character(.))
     )
   ) %>% 
   map_dfr(.,
-      ~ lm(SR_long ~ .x,
-           data = ds2) %>% 
+      ~ lm(phq_total ~ .x,
+           data = ds2_full) %>% 
         broom::tidy(),
       .id = "stratum"
         ) %>% 
@@ -2226,7 +2224,57 @@ srl_2 <-
       round, 3
     )
   ) %>% 
-  add_column(outcome = "SR_long") %>% 
+  add_column(outcome = "phq") %>% 
   add_column(wave = "2")
+```
 
+```{r brs models}
+
+ds %>% 
+  group_by(hashed_id) %>% 
+  mutate(brs_base = brs_total[wave=1]) %>% 
+  filter(wave == 2) %>% 
+  lm(SR_long ~ brs_base,
+     data = .) %>% 
+  summary()
+
+ds %>% 
+  group_by(hashed_id) %>% 
+  mutate(brs_base = brs_total[wave=1]) %>% 
+  filter(wave == 1) %>% 
+  lm(SR_long ~ brs_base,
+     data = .) %>% 
+  summary() 
+
+ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id) %>%
+  group_by(hashed_id) %>% 
+  mutate(brs_base = brs_total[wave=1],
+         sr_long_wave1 = SR_long[wave=1],
+         sr_long_wave2 = SR_long[wave=2],
+         sr_long_wave3 = SR_long[wave=3]) %>% 
+  filter(wave == 1) %>% 
+  ungroup() %>% 
+  select(brs_base,
+         starts_with("sr_long")) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "BRS")
+```
+
+```{r}
+ds %>% 
+  filter(wave == 1) %>% 
+  select(brs_total,
+         phq_total,
+         ghq_total) %>% 
+    psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "BRS")
 ```
