@@ -1365,9 +1365,23 @@ ds %>%
          SR_ghq,
          SR_ghq_rel,
          ghq_total) %>% 
+  mutate(
+    across(
+      .cols = c("phq_total", "ghq_total"),
+      .fns = ~ . / 10
+    )
+  ) %>% 
   pivot_longer(.,
                cols = SR:ghq_total,
                names_to = "outcome") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR",
+                                     "SR_rel",
+                                     "ghq_total",
+                                     "SR_ghq",
+                                     "SR_ghq_rel"))
+         ) %>% 
   filter(wave==1) %>% 
   ggplot(.,
          aes(x = outcome,
@@ -1375,4 +1389,57 @@ ds %>%
              fill = sd03),
          colour = sd03) +
   geom_boxplot()
+```
+
+```{r}
+ds_plots <- 
+  ds %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession,
+         profession_hcw,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         brs_total,
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25ea, # trust government (waves 2 and 3)
+         mp25f, # trust workplace (wave 1)
+         mp25fb, # trust work colleagues (wave 2 and 3)
+         SR,
+         SR_rel,
+         phq_total,
+         SR_ghq,
+         SR_ghq_rel,
+         ghq_total) %>% 
+  mutate(
+    across(
+      .cols = c("phq_total", "ghq_total"),
+      .fns = ~ . / 10
+    )
+  ) %>% 
+  pivot_longer(.,
+               cols = SR:ghq_total,
+               names_to = "outcome") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR",
+                                     "SR_rel",
+                                     "ghq_total",
+                                     "SR_ghq",
+                                     "SR_ghq_rel"))
+         )
+
+ds_plots %>% 
+  select(-c(hashed_id, wave)) %>% 
+  select(sd03:ra51) %>% 
+  map(~ ggplot(data = ds_plots,
+               mapping = aes(x = outcome,
+                             y = value,
+                             fill = .x),
+               colour = .x) +
+  geom_boxplot()
+  ) # Works without wave filter
 ```
