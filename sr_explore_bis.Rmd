@@ -4,7 +4,7 @@ author: "Papoula Petri-Romão & Roberto Mediavilla"
 date: "`r Sys.Date()`"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -110,8 +110,17 @@ ds <-
                       "5" = 1) %>% 
         as.numeric
     ),
-    brs_total = select(., c(re57:re63)) %>% rowSums()/6
+    brs_total = select(., c(re57:re63)) %>% rowSums()/6, #FIXME: denom n not 6
+    brs_dic = case_when(brs_total < 3 ~ "low",
+                        brs_total > 2.99 & brs_total < 4.31 ~ "normal",
+                        brs_total > 4.30 ~ "high") %>% 
+      as_factor() %>% 
+      relevel(., ref = "low")
   )
+
+# Impute missing strata at wave 3
+
+#TODO: pending
 ```
 
 ```{r drop fake nas}
@@ -161,7 +170,7 @@ ds <-
                         "0" = "3",
                         "1" = "2",
                         "1" = "1",
-                        "1" = "0"), #TODO: check direction
+                        "1" = "0"),
     ehc_11 = mp25a,
     
     # COVID-19 stressors
@@ -303,9 +312,9 @@ ds %>%
     province,
     nuts_id,
     ep31, # prioritisation instructions
-    mp25g, # trust government (wave 1)
+    mp25g, # trust government
     mp25ea, # trust government (waves 2 and 3)
-    mp25f, # trust workplace (wave 1)
+    mp25f, # trust workplace
     mp25fb, # trust work colleagues (wave 2 and 3)
     #TODO: harmonise if important longitudinally (not identical items)
     ) %>% 
@@ -359,9 +368,9 @@ ds %>%
     #province,
     #nuts_id,
     ep31, # prioritisation instructions
-    mp25g, # trust government (wave 1)
+    mp25g, # trust government
     mp25ea, # trust government (waves 2 and 3)
-    mp25f, # trust workplace (wave 1)
+    mp25f, # trust workplace
     mp25fb # trust work colleagues (wave 2 and 3)
   ) %>% 
   tbl_summary(.,
@@ -1154,9 +1163,6 @@ ids <- ds %>%
 
 ```
 
-
-Papoula
-
 ```{r longitudinal}
 
 # LM with random intercept and slope
@@ -1174,7 +1180,7 @@ E_slope_long  = summary(EP_long )$coefficients[2]
 ds$P_pred_long  = (intercept_long  + (scale(ds$E)*E_slope_long ))
 
 
-ds$SR_long = scale(scale(ds$phq_total) -ds$P_pred_long )
+ds$SR_long <-  scale(scale(ds$phq_total) -ds$P_pred_long )
 ds$RES_long <- -(ds$SR_long)
 
 ds  %>% 
@@ -1248,13 +1254,10 @@ ds %>%
                       density = TRUE,
                       ellipses = TRUE,
                       main = "All waves (cross-sectional)")
-
-#TODO: longitudinal
-
 ```
 
-```{r correlations ghq}
-
+```{r correlations ghq, eval = FALSE}
+#TODO: update with PHQ code if needed
 ds %>% 
   filter(wave == 1) %>% 
   select(E,
@@ -1315,7 +1318,7 @@ ds %>%
 
 # Comparison SR vs outcome scores
 
-```{r}
+```{r eval = FALSE}
 ds %>% 
   select(hashed_id,
          wave,
@@ -1346,9 +1349,7 @@ ds %>%
              .tbl_fun = ~ tbl_summary(., by = outcome))
 
 #FIXME: this is not what I look for
-```
 
-```{r}
 ds %>% 
   select(hashed_id,
          wave,
@@ -1378,11 +1379,9 @@ ds %>%
     across(
       .cols = value,
       .fns = ~ mean(value, na.rm = TRUE)
-  )               s
+  )           
   )
-```
 
-```{r}
 ds %>% 
   select(hashed_id,
          wave,
@@ -1430,55 +1429,754 @@ ds %>%
   geom_boxplot()
 ```
 
-```{r}
-ds_plots <- 
+```{r plots new}
+ds_1 <- 
   ds %>% 
+  filter(wave == 1) %>% 
   select(hashed_id,
          wave,
          sd03,
          age_cat,
-         profession,
          profession_hcw,
+         brs_dic,
          ra50, # soc support at work
          ra51, # soc support outside
-         brs_total,
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR")
+  )
+  )
+
+ds_2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR")
+  )
+  )
+
+ds_3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR")
+  )
+  )
+
+full_ids <- 
+  ds %>% 
+  group_by(hashed_id) %>% 
+  count() %>% 
+  filter(n == 3) 
+
+ds_1f <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 1) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR_long,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR_long:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR_long")
+  )
+  )
+
+ds_2f <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 2) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR_long,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR_long:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR_long")
+  )
+  )
+
+ds_3f <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 3) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government
+         mp25f, # trust workplace
+         SR_long,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR_long:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR_long")
+  )
+  )
+
+names_strat <- c("Gender",
+                 "Age",
+                 "Profession",
+                 "BRS",
+                 "Support at work",
+                 "Support outside",
+                 "Triage instructions",
+                 "Trust in government",
+                 "Trust in workplace")
+
+plots_1 <- 
+  ds_1 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_1,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w1_plots <- ggpubr::ggarrange(plotlist = plots_1)
+
+plots_2 <- 
+  ds_2 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_2,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w2_plots <- ggpubr::ggarrange(plotlist = plots_2)
+
+plots_3 <- 
+  ds_3 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_3,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w3_plots <- ggpubr::ggarrange(plotlist = plots_3)
+
+plots_4 <- 
+  ds_1f %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_1f,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w1l_plots <- ggpubr::ggarrange(plotlist = plots_4)
+
+plots_5 <- 
+  ds_2f %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_2f,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w2l_plots <- ggpubr::ggarrange(plotlist = plots_5)
+
+plots_6 <- 
+  ds_3f %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_3f,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w3l_plots <- ggpubr::ggarrange(plotlist = plots_6)
+```
+
+```{r plots old, eval = FALSE}
+ds_1 <- 
+  ds %>% 
+  filter(wave == 1) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
          ep31, # prioritisation instructions
          mp25g, # trust government (wave 1)
-         mp25ea, # trust government (waves 2 and 3)
          mp25f, # trust workplace (wave 1)
-         mp25fb, # trust work colleagues (wave 2 and 3)
          SR,
          SR_rel,
-         phq_total,
-         SR_ghq,
-         SR_ghq_rel,
-         ghq_total) %>% 
-  mutate(
-    across(
-      .cols = c("phq_total", "ghq_total"),
-      .fns = ~ . / 10
-    )
-  ) %>% 
+         SR_long,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
   pivot_longer(.,
-               cols = SR:ghq_total,
-               names_to = "outcome") %>% 
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
   mutate(outcome = factor(outcome,
                           levels = c("phq_total",
                                      "SR",
                                      "SR_rel",
-                                     "ghq_total",
-                                     "SR_ghq",
-                                     "SR_ghq_rel"))
-         )
+                                     "SR_long")
+  )
+  )
 
-ds_plots %>% 
-  select(-c(hashed_id, wave)) %>% 
-  select(sd03:ra51) %>% 
-  map(~ ggplot(data = ds_plots,
-               mapping = aes(x = outcome,
-                             y = value,
-                             fill = .x),
-               colour = .x) +
-  geom_boxplot()
-  ) # Works without wave filter
+ds_2 <- 
+  ds %>% 
+  filter(wave == 2) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25ea, # trust government (wave 2 and 3)
+         mp25fb, # trust workplace (wave 2 and 3)
+         SR,
+         SR_rel,
+         SR_long,
+         phq_total) %>% 
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR",
+                                     "SR_rel",
+                                     "SR_long")
+  )
+  )
+
+ds_3 <- 
+  ds %>% 
+  filter(wave == 3) %>% 
+  select(hashed_id,
+         wave,
+         sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25ea, # trust government (wave 2 and 3)
+         mp25fb, # trust workplace (wave 2 and 3)
+         SR,
+         SR_rel,
+         SR_long,
+         phq_total) %>%
+  mutate(phq_total = phq_total/10) %>% 
+  pivot_longer(.,
+               cols = SR:phq_total,
+               names_to = "outcome",
+               values_to = "score") %>% 
+  mutate(outcome = factor(outcome,
+                          levels = c("phq_total",
+                                     "SR",
+                                     "SR_rel",
+                                     "SR_long")
+  )
+  )
+
+names_strat <- c("Gender",
+                 "Age",
+                 "Profession",
+                 "BRS",
+                 "Support at work",
+                 "Support outside",
+                 "Triage instructions",
+                 "Trust in government",
+                 "Trust in workplace")
+
+plots_1 <- 
+  ds_1 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_1,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w1_plots <- ggpubr::ggarrange(plotlist = plots_1)
+
+plots_2 <- 
+  ds_2 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_2,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w2_plots <- ggpubr::ggarrange(plotlist = plots_2)
+
+plots_3 <- 
+  ds_3 %>% 
+  select(-c(hashed_id, wave),
+         -c(outcome, score)) %>% 
+  map2(.,
+       .y = names_strat,
+       ~ ggplot(data = ds_3,
+                mapping = aes(x = outcome,
+                              y = score,
+                              fill = .x),
+                colour = .x) +
+         geom_boxplot() +
+         labs(title = .y) + 
+         xlab(label = "") +
+         scale_fill_viridis_d()
+  )
+
+w3_plots <- ggpubr::ggarrange(plotlist = plots_3)
+```
+
+Models
+
+```{r models old}
+
+# Create datasets
+
+ds1 <- 
+  ds %>% 
+  filter(wave == 1)
+
+ds2 <- 
+  ds %>% 
+  filter(wave == 2)
+
+ds3 <- 
+  ds %>% 
+  filter(wave == 3)
+
+ds1_full <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 1)
+
+ds2_full <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 2)
+
+ds3_full <- 
+  ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id,
+         wave == 3)
+
+# Get estimates
+
+sr_1 <- 
+  ds1 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25g, mp25f),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR ~ .x,
+           data = ds1) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR") %>% 
+  add_column(wave = "1")
+
+phq_1 <- 
+  ds1 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25g, mp25f),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(phq_total ~ .x,
+           data = ds1) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "phq") %>% 
+  add_column(wave = "1")
+
+srl_1 <- 
+  ds1_full %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25g, mp25f),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR_long ~ .x,
+           data = ds1_full) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR_long") %>% 
+  add_column(wave = "1")
+
+
+
+sr_2 <- 
+  ds2 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         mp25ea, # trust government
+         mp25fb) %>%  # trust workplace
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR ~ .x,
+           data = ds2) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR") %>% 
+  add_column(wave = "2")
+
+srl_1 <- 
+  ds_full %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         mp25ea, # trust government
+         mp25fb) %>%  # trust workplace
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR_long ~ .x,
+           data = ds_full) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR_long") %>% 
+  add_column(wave = "long")
+
+# I won't do wave 3 because it requires work. SR_rel same results
+
+srl_1 <- 
+  ds1 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         ep31, # prioritisation instructions
+         mp25g, # trust government (wave 1)
+         mp25f) %>%  # trust workplace (wave 1) %>% 
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25g, mp25f),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR_long ~ .x,
+           data = ds1) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR_long") %>% 
+  add_column(wave = "1")
+
+srl_2 <- 
+  ds2 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         mp25ea, # trust government
+         mp25fb) %>%  # trust workplace
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR_long ~ .x,
+           data = ds2) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR_long") %>% 
+  add_column(wave = "2")
+
+srl_2 <- 
+  ds2 %>% 
+  select(sd03,
+         age_cat,
+         profession_hcw,
+         brs_dic,
+         ra50, # soc support at work
+         ra51, # soc support outside
+         mp25ea, # trust government
+         mp25fb) %>%  # trust workplace
+  mutate(
+    across(
+      .cols = c(ra50, ra51, mp25ea, mp25fb),
+      .fns = ~as.numeric(as.character(.))
+    )
+  ) %>% 
+  map_dfr(.,
+      ~ lm(SR_long ~ .x,
+           data = ds2) %>% 
+        broom::tidy(),
+      .id = "stratum"
+        ) %>% 
+  mutate(
+    across(
+      where(is.numeric),
+      round, 3
+    )
+  ) %>% 
+  add_column(outcome = "SR_long") %>% 
+  add_column(wave = "2")
+
 ```
