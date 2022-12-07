@@ -1162,12 +1162,25 @@ Papoula
 
 ```{r longitudinal}
 
-# LM with random intercept and slope
-EP_long <- ds%>% 
+# fixed effect
+EP_fixed <- ds%>% 
   group_by(hashed_id) %>% 
   filter(hashed_id %in% ids$hashed_id) %>% 
   lm(scale(phq_total)~poly(scale(E),1, raw = TRUE),data=.)
 
+## the result is different when we add a random intercept
+ EP_long <- ds%>% 
+  group_by(hashed_id) %>% 
+  filter(hashed_id %in% ids$hashed_id) %>% 
+lmer(scale(phq_total)~poly(scale(E),1, raw =T)+ (1|hashed_id),data=., control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE))
+
+anova(EP_long, EP_fixed)
+
+## no difference when adding random slope, the result is the same as a lm without random effects
+EP_sloe <- ds%>% 
+  group_by(hashed_id) %>% 
+  filter(hashed_id %in% ids$hashed_id) %>% 
+lmer(scale(phq_total)~poly(scale(E),1, raw =T)+ (scale(E)-1|hashed_id),data=., control = lmerControl(optimizer = "nloptwrap", calc.derivs = FALSE))
 
 intercept_long  = summary(EP_long )$coefficients[1]
 E_slope_long  = summary(EP_long )$coefficients[2]
