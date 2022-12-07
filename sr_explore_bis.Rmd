@@ -4,7 +4,7 @@ author: "Papoula Petri-Romão & Roberto Mediavilla"
 date: "`r Sys.Date()`"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -1145,9 +1145,44 @@ ds %>% # Check
 
 # SR scores (longit)
 
+```{r ids}
+
+ids <- ds %>%
+  group_by(hashed_id) %>%
+  count() %>%
+  filter(n == 3)
+
+```
+
+
 Papoula
 
-```{r}
+```{r longitudinal}
+
+# LM with random intercept and slope
+dsc <- ds %>% filter(hashed_id %in% ids$hashed_id)
+
+EP_long      <- ds %>% filter(hashed_id %in% ids$hashed_id) %>% lm(scale(phq_total)~poly(scale(E),1, raw = TRUE),data=.)
+
+
+intercept_long  = summary(EP_long )$coefficients[1]
+E_slope_long  = summary(EP_long )$coefficients[2]
+
+## predicted E wwould be predE = slope*actualE + intercept
+## calculate predicted E based on this formula
+
+ds$P_pred_long  = (intercept_long  + (scale(ds$E)*E_slope_long ))
+
+
+ds$SR_long = scale(scale(ds$phq_total) -ds$P_pred_long )
+ds$RES_long <- -(ds$SR_long)
+
+ds  %>% 
+  select(P_pred_long,
+         SR_long,
+         RES_long) %>% 
+  skimr::skim()
+
 
 ```
 
@@ -1161,6 +1196,7 @@ ds %>%
          E_rel,
          SR,
          SR_rel,
+         SR_long,
          phq_total) %>% 
   psych::pairs.panels(.,
                       method = "pearson",
@@ -1175,6 +1211,7 @@ ds %>%
          E_rel,
          SR,
          SR_rel,
+         SR_long,
          phq_total) %>% 
   psych::pairs.panels(.,
                       method = "pearson",
@@ -1189,6 +1226,7 @@ ds %>%
          E_rel,
          SR,
          SR_rel,
+         SR_long,
          phq_total) %>% 
   psych::pairs.panels(.,
                       method = "pearson",
@@ -1202,6 +1240,7 @@ ds %>%
          E_rel,
          SR,
          SR_rel,
+         SR_long,
          phq_total) %>% 
   psych::pairs.panels(.,
                       method = "pearson",
