@@ -81,7 +81,8 @@ ds <-
 ds <- 
   ds %>%
   mutate(ghq_total = select(., c(ad34:ad45)) %>% rowSums(),
-         phq_total = select(., c(phq68:phq76)) %>% rowSums())
+         phq_total = select(., c(phq68:phq76)) %>% rowSums(),
+         ptsd_total = select(., c(pcptsd1:pcptsd5)) %>% rowSums())
 
 ds <- 
   ds %>% 
@@ -425,6 +426,39 @@ ds %>%
     )
   ) %>% 
   cor.plot(main = "Wave 3")
+
+# only recoded stressors
+
+ds %>% 
+  select(wave,
+         starts_with("ehc_"),
+         phq_total,
+         ghq_total,
+         brs_total) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  filter(wave == 1) %>% 
+  psych::cor.plot()
+
+ds %>% 
+  select(wave,
+         starts_with("ec_"),
+         phq_total,
+         ghq_total,
+         brs_total) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(as.character(.))
+    )
+  ) %>% 
+  filter(wave == 1) %>% 
+  psych::cor.plot()
+
 ```
 
 # The mess
@@ -2257,6 +2291,31 @@ ds %>%
   ungroup() %>% 
   select(brs_base,
          starts_with("sr_long")) %>% 
+  psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "BRS")
+
+ds %>% 
+  filter(hashed_id %in% full_ids$hashed_id) %>%
+  group_by(hashed_id) %>% 
+  mutate(brs_base = brs_total[wave=1],
+         sr_long_wave1 = SR_long[wave=1],
+         sr_wave1 = SR[wave=1],
+         phq_wave3 = phq_total[wave=3],
+         ghq_wave3 = ghq_total[wave=3],
+         ptsd_wave3 = ptsd_total[wave=3],
+         ) %>% 
+  filter(wave == 1) %>% 
+  ungroup() %>% 
+  select(brs_base,
+         sr_long_wave1,
+         sr_wave1,
+         phq_wave3,
+         ghq_wave3,
+         ptsd_wave3) %>% 
   psych::pairs.panels(.,
                       method = "pearson",
                       hist.col = "#00AFBB",
