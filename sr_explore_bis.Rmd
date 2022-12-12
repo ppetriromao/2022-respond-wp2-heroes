@@ -11,7 +11,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.path = "./figs/")
+knitr::opts_chunk$set(echo = FALSE, fig.path = "./figs/")
 
 require(pacman)
 p_load(tidyverse,
@@ -25,7 +25,55 @@ ds_labels <- labelled::var_label(ds) # to restore labels
 ds_bis <- ds # use ds <- sjlabelled::var_lables(ds_bis) to restore
 ```
 
+# Summary after JC
+
+The SR scores have a high correlation with the PHQ or GHQ, respectively. However, this is not unexpected if the stressor occurence does not change during waves. *this needs to be checked*
+
+The preferred outcome is the SR score. 
+
+The paper should focus on using the SR as an outcome and investigating "social level resilience factors".
+
+The BRS should not be considered as an outcome. The temporal/cross-sectional relationship shows us that "how reactive perceive yourself to an acute stressors is related to how reactive you are in terms of your mental health problems". BRS appears to be a convergent measure of SR score. 
+
+      
+
+### cross-sectional samples
+
+It would be interesting to look at the changes in the importance of resilience factors (RFs) over the different waves. This could potentially looked at in a network analyses in the cross-sectional samples. 
+
+### TODO
+    
+    - adjust for multiple testing. 
+    - network analyses between resilience factors at different waves
+      
+
+### longitudinal analysis
+
+Investigate if the time courses of mental health (P) and resilience (SR) is the same or not. Test this formally (The scale previously did not show a difference)
+
+Stress inoculation
+We would expect to see that those who experiences a high amount of stress in the first wave, would either benefit from stress inoculation or suffer from being sensitised to stress. We would expect a inverted U shape of stress inoculation. In line with this, we would perhaps see that the skills that you develop in the first wave, might be helpful in the second wave. 
+
+
+      
+
+### TODO: 
+
+    - check distribution of stressors across waves
+    - investigate stress inoculation
+    - test: Group differences between "inoculated" and "sensitised"
+      Consider looking at "becoming probably depressed" as an outcome
+    - test: how does this relationship look longitudinally? Compare SR score and BRS as *predictors* of SR/mental health at T2. 
+
 # Pre work
+
+Steps
+
+    1. We first recode the values -993, -991 and -992 back to NAs. 
+    2. We then recode "I don't know" and similar answers as NAs. 
+    3. We then compute sum scores. 
+    4. We then reduce the datasets to not include missing participants at time points
+
 
 ```{r var transf}
 
@@ -138,6 +186,8 @@ ds <-
   ds %>% 
   drop_na(assessment_week)
 ```
+
+## Stressor recoding
 
 ```{r stressors coding}
 ds <- 
@@ -465,6 +515,8 @@ ds %>%
 
 Descriptives show that all stressors have NAs
 
+TODO where are the descriptives?
+
 ## First approach to calculating E scores
 
 ```{r E scores 1, eval = FALSE}
@@ -664,7 +716,8 @@ ds %>%
 
 Alles in Ordnung (apparently...)
 
-# SR scores (cross-sectional)
+# SR scores
+## SR cross-sectional
 
 ```{r sr abs cs phq}
 
@@ -936,7 +989,7 @@ ds %>% # Check
   skimr::skim()
 ```
 
-# SR relative scores (cross-sectional)
+## SR relative scores cross-sectional
 
 ```{r sr rel cs phq}
 
@@ -1189,7 +1242,7 @@ ds %>% # Check
   skimr::skim()
 ```
 
-# SR scores (longit)
+## SR scores (longit)
 
 ```{r ids}
 
@@ -1279,6 +1332,7 @@ ds %>%
 ```
 
 # Outcomes
+
 
 ```{r correlations phq}
 
@@ -1403,6 +1457,8 @@ ds %>%
 ```
 
 # Comparison SR vs outcome scores
+
+
 
 ```{r eval = FALSE}
 ds %>% 
@@ -2337,3 +2393,16 @@ ds %>%
                       ellipses = TRUE,
                       main = "BRS")
 ```
+
+
+# Stress inoculation
+
+So, here we want to look at the effect of experiencing high stress in the first wave on resilience in the second wave. 
+We prefer looking at T1 and T2 because the sample size is higher. 
+This same analysis can be replicated in the complete sample (T1, T2, T3)
+
+I think for this, we need to consider how to classify high and low stress. 
+Initially, we should look at modelling E at T1 and P/SR at T2. Do we see a U shape?
+Then we extract the cut offs. 
+Then we can look at latent classes. 
+
