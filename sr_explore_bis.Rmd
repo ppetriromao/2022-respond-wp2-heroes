@@ -427,7 +427,7 @@ ds %>%
   ) %>% 
   cor.plot(main = "Wave 3")
 
-# only recoded stressors
+# cor plots recoded stressors (wave 1)
 
 ds %>% 
   select(wave,
@@ -2262,7 +2262,21 @@ phql_2 <-
   add_column(wave = "2")
 ```
 
+Below some models - further thinking about performance of BRS and SR scores as
+prospective predictors of mental health
+
 ```{r brs models}
+ds %>% 
+  filter(wave == 1) %>% 
+  select(brs_total,
+         phq_total,
+         ghq_total) %>% 
+    psych::pairs.panels(.,
+                      method = "pearson",
+                      hist.col = "#00AFBB",
+                      density = TRUE,
+                      ellipses = TRUE,
+                      main = "BRS")
 
 ds %>% 
   group_by(hashed_id) %>% 
@@ -2321,19 +2335,5 @@ ds %>%
                       hist.col = "#00AFBB",
                       density = TRUE,
                       ellipses = TRUE,
-                      main = "BRS")
-```
-
-```{r}
-ds %>% 
-  filter(wave == 1) %>% 
-  select(brs_total,
-         phq_total,
-         ghq_total) %>% 
-    psych::pairs.panels(.,
-                      method = "pearson",
-                      hist.col = "#00AFBB",
-                      density = TRUE,
-                      ellipses = TRUE,
-                      main = "BRS")
+                      main = "BRS") #TODO: model associations
 ```
